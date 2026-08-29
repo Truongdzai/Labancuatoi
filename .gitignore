@@ -1,0 +1,30 @@
+# ============================================================
+#  KHÔNG ĐẨY LÊN REPO CÔNG KHAI
+# ============================================================
+
+# Tài liệu gốc của hieu.tv — PDF và bảng tính của tác giả.
+# Đây là tài sản của người khác, không được phát tán lại.
+# Giữ ở máy để tra cứu; app chỉ dùng phần đã đúc kết và viết lại.
+Hieutv/
+
+# Thuộc dự án khác, không liên quan tới app này.
+Cam-nang-Product-UX.md
+
+# Tài liệu làm việc riêng.
+PROMPT-cho-Claude-Code.md
+
+# Ảnh chụp kiểm thử — 19 MB, sinh lại được bằng `node shot.mjs`.
+anh-chup/
+
+# Nhánh cũ đã bỏ (6 tab, khoá htdtc.v2, 164 thẻ). Giữ ở máy phòng khi cần tra.
+_luu-tru/
+
+# Rác của công cụ.
+__pycache__/
+*.pyc
+node_modules/
+.DS_Store
+Thumbs.db
+
+# Đề phòng: file sao lưu dữ liệu cá nhân không bao giờ được đẩy lên.
+la-ban-tu-do-tai-chinh-*.json
