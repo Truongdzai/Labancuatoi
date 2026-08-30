@@ -357,6 +357,39 @@ tr.hi td{background:var(--accent-soft)}
 .pill{display:inline-block; padding:2px 9px; border-radius:999px; font-size:11px; font-weight:600;
   background:var(--surface-2); color:var(--ink3)}
 .pill.ok{background:color-mix(in srgb,var(--good) 16%,transparent); color:var(--good)}
+.pill.warn{background:color-mix(in srgb,var(--warn) 20%,transparent); color:var(--warn)}
+.pill.no{background:color-mix(in srgb,var(--crit) 16%,transparent); color:var(--crit)}
+
+/* ---------- chấm điểm ứng viên ---------- */
+.critlist{display:grid; gap:9px; margin-top:13px}
+.critrow{display:grid; grid-template-columns:1fr auto; gap:14px; align-items:center;
+  padding:12px 14px; background:var(--surface); border:1px solid var(--line); border-radius:var(--r); border-left-width:3px; border-left-color:var(--line)}
+.critrow.v0{border-left-color:var(--crit)}
+.critrow.v1{border-left-color:var(--warn)}
+.critrow.v2{border-left-color:var(--good)}
+.critrow .t{font-weight:600; font-size:14px}
+.critrow .d{font-size:12.5px; color:var(--ink3); margin-top:3px; line-height:1.55; max-width:64ch}
+.uvrow{display:grid; grid-template-columns:auto 1fr auto; gap:12px; align-items:center;
+  padding:13px 15px; background:var(--surface); border:1px solid var(--line); border-radius:var(--r); border-left-width:3px; border-left-color:var(--line)}
+.uvrow.cham{border-left-color:var(--accent)}
+.uvrow.cua{border-left-color:var(--brass); background:linear-gradient(135deg,var(--brass-soft),var(--surface) 60%)}
+.uvrow .ma{font-family:"IBM Plex Mono",monospace; font-weight:600; font-size:16px; letter-spacing:-.01em}
+.uvrow .tn{font-size:12.5px; color:var(--ink3); margin-top:2px; line-height:1.45}
+.uvrow .sc{font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums; font-weight:600; font-size:17px; text-align:right; white-space:nowrap}
+.uvlist{display:grid; gap:9px; margin-top:14px}
+
+/* ---------- lưới ngày và lưới đợt mua ---------- */
+.dotgrid{display:flex; flex-wrap:wrap; gap:5px; margin-top:13px}
+.dotgrid i{width:16px; height:16px; border-radius:4px; display:block; background:var(--surface-3); border:1px solid var(--line)}
+.dotgrid i.today{border-color:var(--brass); border-width:2px}
+.mgrid{display:grid; grid-template-columns:repeat(auto-fill,minmax(34px,1fr)); gap:5px; margin-top:13px}
+.mgrid button{height:30px; padding:0; border-radius:5px; background:var(--surface-3); border:1px solid var(--line);
+  font-family:"IBM Plex Mono",monospace; font-size:10.5px; font-weight:600; color:var(--ink3); display:grid; place-items:center}
+.mgrid button:hover{border-color:var(--line-2)}
+.mgrid button.on{background:var(--accent); border-color:var(--accent); color:#fff}
+.mgrid button.now{border-color:var(--brass); border-width:2px}
+@media (max-width:640px){.critrow{grid-template-columns:1fr} .critrow .seg{width:100%} .critrow .seg button{flex:1}
+  .uvrow{grid-template-columns:auto 1fr} .uvrow .sc{grid-column:2/-1; text-align:left}}
 @media (max-width:640px){.addrow{grid-template-columns:1fr!important}}
 
 /* ============ TỐI ƯU CHO MÀN HÌNH CẢM ỨNG ============ */
@@ -505,6 +538,7 @@ nav.tabs button, .btn, .chips button, .subtabs button{min-height:44px}
     <button data-c="ngansach">Ngân sách 50/30/20</button>
     <button data-c="aiban">Bạn đang là ai</button>
     <button data-c="dca">Máy tính DCA</button>
+    <button data-c="chon">Chọn một thứ</button>
     <button data-c="nha">Mua hay thuê nhà</button>
   </nav>
 
@@ -642,6 +676,85 @@ nav.tabs button, .btn, .chips button, .subtabs button{min-height:44px}
   </div>
 
   <!-- ---- Mua hay thuê nhà ---- -->
+  <!-- ---- Chọn một thứ để mua đều ---- -->
+  <div class="cpane" id="c-chon">
+    <div class="card pad">
+      <h4 style="font-size:16px;margin-bottom:4px">Chọn một thứ, rồi mua đều mười năm</h4>
+      <p style="font-size:13.5px;color:var(--ink2);max-width:70ch">Cách mua đều mỗi tháng rồi giữ mười năm thắng nhờ đúng hai việc: chọn kỹ một lần, rồi <em>không đụng vào nữa</em>. Toàn bộ phần khó nằm ở khâu chọn — và khâu đó chỉ làm một lần, làm chậm, làm trước khi bỏ đồng nào vào. Xong rồi thì việc mỗi tháng tốn năm phút, còn việc mỗi ngày là không làm gì cả.</p>
+      <p style="font-size:13.5px;color:var(--ink2);max-width:70ch;margin-top:9px">Bảng dưới đây <strong>không chọn thay bạn</strong> và không biết mã nào đang tốt — nó không nối mạng, không có dữ liệu thị trường. Việc của nó là bắt bạn trả lời đủ những câu mà người định bỏ tiền vào mười năm buộc phải trả lời được, rồi chỉ ra câu nào bạn đang né.</p>
+    </div>
+
+    <div class="card pad" style="margin-top:16px">
+      <h4 style="font-size:15px;margin-bottom:4px">Năm cửa phải qua trước khi chọn</h4>
+      <p style="font-size:13.5px;color:var(--ink2);max-width:70ch">Chưa qua đủ năm cửa này thì chọn mã nào cũng sai — không phải vì mã xấu, mà vì hoàn cảnh sẽ ép bạn bán đúng vào lúc không được bán. Phần này quyết định kết quả nhiều hơn cả việc chọn mã.</p>
+      <div class="chklist" id="gate-list"></div>
+      <div id="gate-note"></div>
+    </div>
+
+    <div class="card pad" style="margin-top:16px">
+      <h4 style="font-size:15px;margin-bottom:4px">Ứng viên</h4>
+      <p style="font-size:13.5px;color:var(--ink2);max-width:70ch">Ghi vào vài cái bạn đang cân nhắc, rồi chấm từng cái bằng <em>cùng một bộ tiêu chí</em>. Chấm cùng một thước là cách duy nhất để so sánh thật — nếu không, bạn sẽ so cái mình đã thích sẵn với cái mình chưa tìm hiểu, và lần nào cái đã thích cũng thắng.</p>
+      <div class="addrow" style="grid-template-columns:minmax(96px,120px) minmax(150px,1fr) auto auto;margin-top:15px">
+        <div class="field"><label for="uv-ma">Mã</label>
+          <div class="inp"><input id="uv-ma" maxlength="12" autocomplete="off" spellcheck="false" placeholder="VD: E1VFVN30"></div></div>
+        <div class="field"><label for="uv-ten">Tên đầy đủ <span class="hint">— để nhớ mình đang mua cái gì</span></label>
+          <div class="inp"><input id="uv-ten" maxlength="90" autocomplete="off" placeholder="Tên doanh nghiệp hoặc tên quỹ"></div></div>
+        <div class="seg" id="uv-loai">
+          <button data-l="cp" aria-pressed="false">Cổ phiếu</button>
+          <button data-l="quy" aria-pressed="true">Quỹ / ETF</button>
+        </div>
+        <button class="btn primary" id="uv-add">Thêm</button>
+      </div>
+      <div id="uv-list"></div>
+    </div>
+
+    <div class="card pad" style="margin-top:16px" id="cham-card" hidden>
+      <div id="cham-head"></div>
+      <div class="critlist" id="cham-list"></div>
+      <div id="cham-verdict"></div>
+    </div>
+
+    <div id="chot-box"></div>
+
+    <div class="card pad" style="margin-top:16px">
+      <h4 style="font-size:15px;margin-bottom:4px">Kế hoạch mua đều</h4>
+      <p style="font-size:13.5px;color:var(--ink2);max-width:70ch">Chọn xong thì phần còn lại chỉ là một câu lệnh lặp đi lặp lại: cùng một số tiền, cùng một ngày, mọi tháng, bất kể bảng giá nói gì. Chọn ngày nào không quan trọng — việc nó <em>cố định</em> mới quan trọng. Cố định thì không còn phải quyết định, mà không phải quyết định thì cảm xúc không có chỗ chen vào.</p>
+      <div class="grid2" style="margin-top:15px" id="chon-fields"></div>
+      <div class="tiles" style="margin-top:16px" id="chon-tiles"></div>
+      <p class="subtle" id="chon-note"></p>
+    </div>
+
+    <div class="card pad" style="margin-top:16px">
+      <h4 style="font-size:15px;margin-bottom:4px">Viết trước, lúc còn đang tỉnh</h4>
+      <p style="font-size:13.5px;color:var(--ink2);max-width:70ch">Hai ô này viết vào lúc bình thường, để đọc lại vào lúc không bình thường. Ngày thị trường giảm ba mươi phần trăm, thứ giữ bạn ngồi yên không phải ý chí — mà là một tờ giấy do chính bạn viết hồi chưa hoảng. Không có nó thì mọi kế hoạch mười năm đều kết thúc ở tháng thứ mười tám.</p>
+      <div class="ikgrid" id="luan-grid"></div>
+    </div>
+
+    <div class="card pad" style="margin-top:16px">
+      <h4 style="font-size:15px;margin-bottom:4px">“Một thứ duy nhất” có hai nghĩa rất khác nhau</h4>
+      <p style="font-size:13.5px;color:var(--ink2);max-width:70ch">Nếu thứ đó là một <strong>quỹ chỉ số rộng</strong>, thì bên trong nó đã là hàng chục doanh nghiệp. Một cái trong rổ sập, bạn mất một phần nhỏ, rổ vẫn còn. Chọn <em>một</em> quỹ như vậy là hoàn toàn hợp lý — nó chỉ trông giống một thứ ở bên ngoài.</p>
+      <p style="font-size:13.5px;color:var(--ink2);max-width:70ch;margin-top:9px">Nếu thứ đó là <strong>một cổ phiếu duy nhất</strong>, bạn đang đặt cả mười năm vào một ban lãnh đạo, một ngành, một chuỗi quyết định mà bạn không tham gia. Chỗ mấu chốt: phần rủi ro riêng của một doanh nghiệp <strong>không được thị trường trả thêm tiền</strong> — nó là rủi ro duy nhất bạn có thể xoá bỏ mà không mất gì đổi lại, chỉ bằng cách chia ra nhiều mã. Chịu nó là chịu không công.</p>
+      <p style="font-size:13.5px;color:var(--ink2);max-width:70ch;margin-top:9px">Vẫn muốn một cổ phiếu? Được — nhưng hãy để nó nằm trong phần tài sản mà mất trắng bạn vẫn sống bình thường, và mỗi lần có báo cáo quý thì mở luận điểm ở trên ra đọc lại một lần.</p>
+    </div>
+
+    <div class="card pad" style="margin-top:16px">
+      <h4 style="font-size:15px;margin-bottom:4px">Lấy số ở đâu</h4>
+      <p style="font-size:13.5px;color:var(--ink2);max-width:70ch">Mọi tiêu chí ở trên đều tra được miễn phí, và đều nên tra ở nguồn gốc:</p>
+      <ul style="font-size:13.5px;color:var(--ink2);max-width:70ch;margin:10px 0 0 18px;line-height:1.65">
+        <li><strong>Báo cáo tài chính kiểm toán</strong> — mục Quan hệ cổ đông trên web doanh nghiệp, và phần công bố thông tin của HOSE / HNX. Đây là nguồn duy nhất có giá trị pháp lý.</li>
+        <li><strong>Báo cáo thường niên</strong> — chỗ ban lãnh đạo tự nói về ngành và kế hoạch. Đọc cả phần rủi ro, đừng đọc mỗi phần thành tích.</li>
+        <li><strong>Bản cáo bạch và báo cáo hoạt động quỹ</strong> — trên web công ty quản lý quỹ; với ETF thì có thêm ở phần công bố của HOSE. Biểu phí đầy đủ nằm ở đây, không nằm trong quảng cáo.</li>
+        <li><strong>Bộ quy tắc chỉ số</strong> (VN30, VNDiamond, VN100…) — do HOSE công bố. Đọc nó thì mới biết quỹ đang bám theo cái gì.</li>
+        <li><strong>Giao dịch của cổ đông nội bộ</strong> — công bố bắt buộc trên HOSE / HNX.</li>
+      </ul>
+      <p style="font-size:13.5px;color:var(--ink2);max-width:70ch;margin-top:10px">Các trang tổng hợp (CafeF, Vietstock, Fireant…) tiện để lọc nhanh và nhìn xu hướng. Nhưng số liệu tổng hợp có thể lệch kỳ hoặc sai — <strong>con số nào dùng để ra quyết định thì phải soi lại trong báo cáo gốc.</strong></p>
+    </div>
+
+    <div class="callout" style="margin-top:16px">
+      <strong>Đây là bộ câu hỏi, không phải lời khuyên đầu tư.</strong> App không nối mạng, không có dữ liệu thị trường, không biết mã nào đang rẻ hay đắt, và không gợi ý mã nào cả. Điểm số ở đây chỉ phản ánh <em>những gì chính bạn đã tự kiểm chứng được</em> — chấm rộng tay thì điểm cao mà rủi ro không hề giảm đi chút nào. Bộ tiêu chí này cũng không phủ hết mọi loại hình: ngân hàng, bảo hiểm và công ty chứng khoán có cấu trúc vốn khác hẳn, phải đọc bằng bộ chỉ số riêng.
+    </div>
+  </div>
+
   <div class="cpane" id="c-nha">
     <div class="card pad">
       <h4 style="font-size:16px;margin-bottom:4px">Mua hay thuê nhà</h4>
@@ -718,6 +831,7 @@ nav.tabs button, .btn, .chips button, .subtabs button{min-height:44px}
 
   <nav class="subtabs" id="tnav" aria-label="Chọn mục theo dõi">
     <button data-p="log" aria-current="true">Nhật ký</button>
+    <button data-p="kyluat">Kỷ luật mỗi ngày</button>
     <button data-p="nguon">Bảy nguồn thu</button>
     <button data-p="cham">Tự chấm</button>
     <button data-p="ngam">Suy ngẫm</button>
@@ -744,6 +858,38 @@ nav.tabs button, .btn, .chips button, .subtabs button{min-height:44px}
   </div>
 
   <div class="tiles" style="margin-top:16px" id="ttiles"></div>
+  </div>
+
+  <div class="tpane" id="t-kyluat">
+  <div class="sect-head"><span class="eyebrow">Việc của hôm nay</span></div>
+  <h3 style="font-size:21px;letter-spacing:-.02em;margin-bottom:6px">Kỷ luật mỗi ngày</h3>
+  <p style="font-size:14px;color:var(--ink2);max-width:68ch">Việc hằng ngày của người định giữ mười năm không phải là xem giá — mà là <em>không xem</em>. Năm ô dưới đây không đo thị trường, chúng đo bạn. Và đây là phần duy nhất của kết quả mười năm mà bạn kiểm soát được trọn vẹn: bạn không quyết được thị trường tăng bao nhiêu, nhưng quyết được mình có ngồi yên đủ lâu để nhận phần đó hay không.</p>
+  <div class="chklist" id="kl-list"></div>
+  <div class="tiles" style="margin-top:16px" id="kl-tiles"></div>
+
+  <div class="card pad" style="margin-top:16px">
+    <h4 style="font-size:15px;margin-bottom:4px">Ba mươi ngày gần nhất</h4>
+    <p style="font-size:13.5px;color:var(--ink2);max-width:68ch">Mỗi ô là một ngày; càng đậm là hôm đó càng làm đủ. Khoảng trống không phải để tự trách — nó chỉ cho bạn thấy hình dạng thật của thói quen mình, thứ mà trí nhớ luôn kể lại sai theo hướng có lợi.</p>
+    <div class="dotgrid" id="kl-30"></div>
+    <p class="subtle" id="kl-30-note"></p>
+  </div>
+
+  <hr class="hr">
+  <div class="sect-head"><span class="eyebrow">Việc của tháng</span></div>
+  <h3 style="font-size:21px;letter-spacing:-.02em;margin-bottom:6px">Đợt mua hằng tháng</h3>
+  <p style="font-size:14px;color:var(--ink2);max-width:68ch">Cả kế hoạch mười năm rút gọn lại chỉ còn từng này: một ô tick, mỗi tháng một lần. Không có gì hào hứng — và chính chỗ không hào hứng đó là lý do nó hiệu quả. Số tiền và số năm lấy từ <em>Kế hoạch mua đều</em> ở tab “Con số của tôi”.</p>
+  <div class="row" style="margin-top:15px" id="mua-row"></div>
+  <div class="tiles" style="margin-top:16px" id="mua-tiles"></div>
+  <div class="card pad" style="margin-top:16px">
+    <h4 style="font-size:15px;margin-bottom:4px">Từng đợt mua</h4>
+    <p style="font-size:13.5px;color:var(--ink2);max-width:68ch">Mỗi ô là một tháng trong kế hoạch. Bấm vào ô để đánh dấu đã mua hoặc bỏ đánh dấu — dùng khi bạn ghi bù cho những tháng trước.</p>
+    <div class="mgrid" id="mua-grid"></div>
+    <p class="subtle" id="mua-note"></p>
+  </div>
+
+  <div class="callout" style="margin-top:18px">
+    <strong>Hôm nay ngứa tay muốn bán?</strong> Đừng cãi nhau với chính mình bằng lý lẽ — lúc đó bên hoảng loạn luôn lý lẽ hay hơn. Mở tab <em>Con số của tôi → Chọn một thứ</em> và đọc lại hai ô bạn tự viết: vì sao mua, và điều gì xảy ra thì bán. Nếu điều đang xảy ra <em>không</em> nằm trong ô thứ hai, thì hôm nay không có việc gì phải làm cả.
+  </div>
   </div>
 
   <div class="tpane" id="t-nguon">
@@ -2111,6 +2257,17 @@ const DEF = {
   tuoi:0,                               // tuổi hiện tại, cho timeline 18–35
   tuDo:{so:"", ghi:""},                 // con số nào đủ để bạn TỰ DO
   tiec:"",                              // nếu 80 tuổi nhìn lại
+  chon:{                                // chọn một thứ để mua đều — khối CHỌN MỘT THỨ
+    cua:"",                             // id ứng viên đã chốt
+    cham:"",                            // id ứng viên đang mở bảng chấm điểm
+    gate:{},                            // năm cửa phải qua trước khi chọn — {khoá: true}
+    pmt:5, nam:10, rate:10, ngay:5,     // kế hoạch mua đều — pmt tính bằng TRIỆU ₫
+    batDau:"",                          // tháng bắt đầu "YYYY-MM"; rỗng = tháng hiện tại
+    luan:"", ban:""                     // luận điểm mua · điều kiện bán, viết trước khi hoảng
+  },
+  ungVien:[],                           // [{id, ma, ten, loai:"cp"|"quy", d:{tiêu chí: 0|1|2}}]
+  kyLuat:{},                            // {"2026-08-30": {gia:true, hoc:true}} — việc mỗi ngày
+  muaThang:{},                          // {"2026-08": true} — đã mua đợt của tháng đó chưa
   ui:{cpane:"moc", tpane:"log"}         // pane nào đang mở trong tab Con số / Theo dõi
 };
 let S = load();
@@ -2131,6 +2288,9 @@ function merge(p){
     values:{...b.values, ...obj(p.values)},
     rebuild:{...b.rebuild, ...obj(p.rebuild)},
     tuDo:{...b.tuDo, ...obj(p.tuDo)},
+    chon:{...b.chon, ...obj(p.chon), gate:obj(obj(p.chon).gate)},
+    kyLuat:obj(p.kyLuat), muaThang:obj(p.muaThang),
+    ungVien:Array.isArray(p.ungVien) ? p.ungVien : [],
     srcs:obj(p.srcs), lessons:obj(p.lessons), steps:obj(p.steps),
     principles:obj(p.principles), mistakes:obj(p.mistakes), env:obj(p.env),
     pains:Array.isArray(p.pains) ? p.pains : [],
@@ -2619,7 +2779,7 @@ function phanLoaiSanNong(cover){
 /* ============================================================
    THANH CHỌN PHỤ — tab Con số của tôi
    ============================================================ */
-const CPANES = {moc:"#c-moc", ngansach:"#c-ngansach", aiban:"#c-aiban", dca:"#c-dca", nha:"#c-nha"};
+const CPANES = {moc:"#c-moc", ngansach:"#c-ngansach", aiban:"#c-aiban", dca:"#c-dca", chon:"#c-chon", nha:"#c-nha"};
 $("#cnav").addEventListener("click", e => {
   const b = e.target.closest("button[data-c]"); if(!b) return;
   S.ui.cpane = b.dataset.c; save(); showCpane();
@@ -3354,7 +3514,7 @@ const RB_FIELDS = [
 /* ============================================================
    THANH CHỌN PHỤ — tab Theo dõi
    ============================================================ */
-const TPANES = {log:"#t-log", nguon:"#t-nguon", cham:"#t-cham", ngam:"#t-ngam"};
+const TPANES = {log:"#t-log", kyluat:"#t-kyluat", nguon:"#t-nguon", cham:"#t-cham", ngam:"#t-ngam"};
 $("#tnav").addEventListener("click", e => {
   const b = e.target.closest("button[data-p]"); if(!b) return;
   S.ui.tpane = b.dataset.p; save(); showTpane();
@@ -3608,6 +3768,476 @@ function renderTuSoi(){
 }
 
 /* ============================================================
+   CHỌN MỘT THỨ ĐỂ MUA ĐỀU
+   App không nối mạng và KHÔNG có dữ liệu thị trường. Bộ này chỉ
+   chấm lại những gì NGƯỜI DÙNG tự kiểm chứng được, và chặn lại khi
+   một tiêu chí bắt buộc bị chấm 0 — điểm tổng không cứu được chỗ đó.
+   ============================================================ */
+const GATE = [
+  {k:"no", t:"Đã trả hết nợ lãi cao",
+   d:"Thẻ tín dụng, vay tiêu dùng, vay nóng. Lãi 3–5%/tháng tức 40–80%/năm — không danh mục đầu tư nào đuổi kịp. Trả hết khoản đó chính là khoản sinh lời cao nhất và chắc chắn nhất bạn mua được."},
+  {k:"quy", t:"Đã có quỹ khẩn cấp",
+   d:"Thiếu nó thì lần đầu xe hỏng hay mất việc là bạn buộc phải bán — mà tai nạn thường rơi đúng lúc thị trường đang xấu. Quỹ khẩn cấp là thứ mua cho bạn quyền không phải bán."},
+  {k:"nhanroi", t:"Mười năm tới không cần đụng tới số tiền này",
+   d:"Tiền học, tiền cưới, tiền mua nhà trong vài năm tới đều không phải tiền nhàn rỗi. Tiền có hạn dùng thì phải để ở chỗ an toàn, kể cả khi chỗ đó sinh lời thấp."},
+  {k:"giam50", t:"Chịu được cảnh danh mục mất một nửa mà không bán",
+   d:"Không phải câu hỏi tu từ: nhìn thẳng vào số tiền bạn định bỏ vào rồi chia đôi, xem cảm giác thế nào. Thị trường nào cũng có những năm như vậy — ai giữ đủ lâu đều đã đi qua ít nhất một lần."},
+  {k:"khongvay", t:"Không dùng đòn bẩy, không vay để mua",
+   d:"Margin lấy mất vũ khí mạnh nhất của người mua dài hạn: quyền chờ. Bị gọi ký quỹ là bị ép bán ở đúng đáy, và không kế hoạch mười năm nào sống sót qua chuyện đó."}
+];
+
+const TC_CP = [
+  {k:"hieu", g:"Hiểu được không", must:true, t:"Giải thích được nó kiếm tiền bằng cách nào",
+   d:"Trong hai câu, cho một người ngoài ngành hiểu. Nói không ra nghĩa là chưa hiểu — dù bạn đã đọc rất nhiều tin về nó."},
+  {k:"conlai", g:"Hiểu được không", t:"Thứ nó bán vẫn còn cần thiết sau mười năm",
+   d:"Bạn đang cưới nó mười năm chứ không hẹn hò một quý. Ngành thay đổi quá nhanh thì phần thắng thuộc về người theo sát hằng tuần — không phải bạn."},
+  {k:"docbctc", g:"Hiểu được không", must:true, t:"Đã tự đọc báo cáo tài chính kiểm toán ba năm gần nhất",
+   d:"Đọc bản kiểm toán trên web doanh nghiệp hoặc trong công bố thông tin của sở giao dịch — không phải bài tóm tắt trên báo, cũng không phải bảng số dựng sẵn trong app chứng khoán."},
+
+  {k:"loinhuan", g:"Con số trong báo cáo", must:true, t:"Lợi nhuận sau thuế dương liên tục năm năm gần nhất",
+   d:"Kể cả những năm khó khăn. Một năm lỗ đột biến có lý do rõ ràng thì không loại doanh nghiệp; lỗ lặp đi lặp lại thì có."},
+  {k:"roe", g:"Con số trong báo cáo", t:"ROE bình quân năm năm từ 15% trở lên",
+   d:"Và đều đặn, chứ không phải một năm đột biến kéo trung bình lên. ROE cao nhờ vay nhiều không tính là tốt — đó chỉ là rủi ro được trang điểm."},
+  {k:"no", g:"Con số trong báo cáo", t:"Nợ vay ròng trên vốn chủ sở hữu dưới một lần",
+   d:"Ngưỡng này dành cho doanh nghiệp sản xuất và dịch vụ. Ngân hàng, bảo hiểm, công ty chứng khoán có cấu trúc vốn khác hẳn — đừng áp ngưỡng này lên chúng, phải đọc bằng bộ chỉ số riêng."},
+  {k:"dongtien", g:"Con số trong báo cáo", must:true, t:"Dòng tiền kinh doanh dương và xấp xỉ lợi nhuận",
+   d:"Lợi nhuận đẹp mà tiền không về là dấu hiệu kinh điển: hàng tồn phình ra, khoản phải thu phình ra, hoặc doanh thu được ghi nhận sớm. Lấy ở báo cáo lưu chuyển tiền tệ."},
+  {k:"phaloang", g:"Con số trong báo cáo", t:"Số cổ phiếu lưu hành không phình lên liên tục",
+   d:"Phát hành thêm mỗi năm nghĩa là phần của bạn nhỏ dần đi trong cùng một cái bánh. So số cổ phiếu hôm nay với năm năm trước là ra."},
+
+  {k:"lanhdao", g:"Con người và lợi thế", t:"Ban lãnh đạo nắm cổ phần lớn và không bán ra liên tục",
+   d:"Tra phần công bố giao dịch của cổ đông nội bộ. Người trong nhà bán ra đều đặn trong lúc bên ngoài được kêu gọi mua vào là tín hiệu đáng sợ hơn mọi biểu đồ."},
+  {k:"loithe", g:"Con người và lợi thế", t:"Nói ra được một lợi thế cạnh tranh cụ thể",
+   d:"Thương hiệu khách chịu trả thêm tiền, mạng lưới phân phối khó dựng lại, chi phí thấp nhất ngành, hoặc khách đổi sang đối thủ thì tốn kém. “Ngành đang hot” không phải lợi thế — nó là thứ kéo thêm đối thủ vào."},
+
+  {k:"dinhgia", g:"Giá và cờ đỏ", t:"P/E và P/B không cao bất thường so với chính nó năm năm qua",
+   d:"Doanh nghiệp tốt mua ở giá quá đắt vẫn có thể lỗ nhiều năm. So với lịch sử của chính nó, và so với vài doanh nghiệp cùng ngành."},
+  {k:"codo", g:"Giá và cờ đỏ", must:true, t:"Không có cờ đỏ về quản trị",
+   d:"Kiểm toán từ chối hoặc nêu ý kiến ngoại trừ; đổi công ty kiểm toán liên tục; giao dịch lớn với bên liên quan mà không giải thích được; lãnh đạo đem cầm cố phần lớn cổ phiếu; báo cáo nộp trễ nhiều lần."}
+];
+
+const TC_QUY = [
+  {k:"rong", g:"Nó thật sự là cái gì", must:true, t:"Bám theo một rổ rộng, không cược vào một ngành",
+   d:"Quỹ theo chỉ số rộng nắm hàng chục doanh nghiệp cùng lúc. Quỹ một ngành thì không — nó chỉ là một cú đặt cược, được đóng gói đẹp hơn và thu phí đều đặn hơn."},
+  {k:"hieuchiso", g:"Nó thật sự là cái gì", t:"Đã đọc và hiểu quy tắc của chỉ số nó bám theo",
+   d:"Chỉ số chọn cổ phiếu theo tiêu chí nào, bao lâu cơ cấu lại một lần, có giới hạn tỷ trọng từng mã không. Bộ quy tắc chỉ số do sở giao dịch công bố công khai."},
+  {k:"thudong", g:"Nó thật sự là cái gì", t:"Phân biệt được quỹ chỉ số thụ động và quỹ mở chủ động",
+   d:"Quỹ chủ động thu phí cao hơn để đổi lấy lời hứa thắng chỉ số. Cứ đòi họ đưa số liệu nhiều năm so với chính chỉ số tham chiếu, đã trừ hết phí — và nhớ rằng quỹ thua kém thường bị đóng, nên bảng thành tích còn lại luôn đẹp hơn sự thật."},
+
+  {k:"phi", g:"Phí — thứ ăn mòn chắc chắn nhất", must:true, t:"Đã cộng đủ MỌI khoản phí, không chỉ phí quản lý",
+   d:"Phí quản lý hằng năm, phí mua, phí bán theo thời gian nắm giữ, phí chuyển đổi, phí thưởng hiệu suất nếu có. Lấy con số trong bản cáo bạch, không lấy trong tờ quảng cáo."},
+  {k:"phithap", g:"Phí — thứ ăn mòn chắc chắn nhất", t:"Tổng phí thuộc nhóm thấp so với các quỹ cùng loại",
+   d:"So thẳng những quỹ cùng bám một chỉ số: danh mục của chúng gần như giống hệt nhau, nên phí là điểm khác biệt gần như duy nhất bạn kiểm soát được. Chênh 1%/năm trong mười năm ăn mất khoảng một phần mười số tiền cuối kỳ — và nó chắc chắn xảy ra, khác với lợi nhuận."},
+
+  {k:"quymo", g:"Có đi được đường dài không", t:"Quy mô quỹ đủ lớn và không teo dần",
+   d:"Quỹ nhỏ và đang co lại có rủi ro bị giải thể giữa chừng. Nó không làm bạn mất tiền ngay, nhưng ép bạn kết thúc kế hoạch vào lúc do người khác chọn."},
+  {k:"saiso", g:"Có đi được đường dài không", t:"Sai số so với chỉ số nhỏ và ổn định qua nhiều năm",
+   d:"Đặt lợi suất quỹ cạnh lợi suất chỉ số từng năm. Lệch vài phần mười phần trăm là bình thường; lệch nhiều và thất thường nghĩa là quỹ vận hành kém."},
+  {k:"demua", g:"Có đi được đường dài không", t:"Mua đều được mỗi tháng mà không vướng gì",
+   d:"Thanh khoản đủ để lệnh khớp ở giá hợp lý, và thao tác mua mất dưới năm phút. Thứ gì mua khó thì tới tháng thứ tám bạn sẽ bỏ — kế hoạch chết vì chỗ đó chứ không vì thị trường."}
+];
+
+const MUC_CHAM = [{v:0, t:"Chưa đạt"}, {v:1, t:"Chưa chắc"}, {v:2, t:"Đạt"}];
+const LOAI_TEN = {cp:"Cổ phiếu", quy:"Quỹ / ETF"};
+const LUAN_Q = [
+  {k:"luan", t:"Vì sao tôi mua thứ này",
+   q:"Viết bằng lời của bạn, không chép của ai. Nếu lý do là “nghe nói sắp tăng” thì đó không phải luận điểm — đó là tin đồn đã được chép ra giấy."},
+  {k:"ban", t:"Điều gì xảy ra thì tôi bán",
+   q:"Ghi sự kiện cụ thể: luận điểm ở ô bên bị chứng minh là sai, doanh nghiệp làm điều X, quỹ đổi cách vận hành, phí tăng. Lưu ý: “giá giảm” không phải điều kiện bán — với người mua đều thì giá giảm là lúc cùng số tiền đó mua được nhiều hơn."}
+];
+
+const tcCua = loai => (loai === "cp" ? TC_CP : TC_QUY);
+
+function diemUV(u){
+  const tc = tcCua(u.loai), d = (u.d && typeof u.d === "object") ? u.d : {};
+  const daCham = tc.filter(c => typeof d[c.k] === "number").length;
+  const tong = tc.reduce((a, c) => a + (typeof d[c.k] === "number" ? d[c.k] : 0), 0);
+  const toiDa = tc.length * 2;
+  return {tc, daCham, thieu:tc.length - daCham, tong, toiDa,
+          pct:toiDa ? tong/toiDa*100 : 0,
+          coDo:tc.filter(c => c.must && d[c.k] === 0),
+          xong:daCham === tc.length};
+}
+function nhanDinhUV(r){
+  if(!r.xong) return {mau:"var(--ink3)", pill:"", ic:"…", t:"Còn " + r.thieu + " tiêu chí chưa trả lời",
+    d:"Điểm chưa có ý nghĩa cho tới khi trả lời hết. Câu bị bỏ trống thường đúng là câu bạn chưa đi tìm hiểu — và đó mới là thông tin đáng giá nhất ở đây."};
+  if(r.coDo.length) return {mau:"var(--crit)", pill:"no", ic:"⚑", t:"Cờ đỏ — " + r.coDo.length + " tiêu chí bắt buộc chưa đạt",
+    d:"Điểm tổng không cứu được chỗ này: " + r.coDo.map(c => "“" + c.t.toLowerCase() + "”").join("; ") + ". Hoặc đi tìm hiểu cho ra rồi chấm lại, hoặc loại nó khỏi danh sách."};
+  if(r.pct >= 80) return {mau:"var(--good)", pill:"ok", ic:"✓", t:"Đủ tiêu chuẩn để cân nhắc",
+    d:"Không tiêu chí bắt buộc nào hỏng, và phần lớn tiêu chí bạn tự kiểm chứng được. Đây là mức tối thiểu để một thứ đáng được giữ mười năm — không phải lời hứa rằng nó sẽ tăng giá."};
+  if(r.pct >= 60) return {mau:"var(--warn)", pill:"warn", ic:"!", t:"Được, nhưng còn lỗ hổng",
+    d:"Xem lại những tiêu chí bạn chấm “Chưa chắc”: mỗi cái là một chỗ bạn đang đoán. Với thứ định giữ mười năm thì đoán càng ít càng tốt."};
+  return {mau:"var(--crit)", pill:"no", ic:"✗", t:"Chưa đủ",
+    d:"Quá nửa tiêu chí chưa đạt. Không có nghĩa nó là thứ tệ — có thể chỉ là bạn chưa biết đủ về nó. Cả hai trường hợp đều dẫn tới cùng một kết luận: chưa phải lúc bỏ tiền vào."};
+}
+
+function renderGate(){
+  const host = $("#gate-list"); host.innerHTML = "";
+  const p = S.inp, mucTieu = p.std * p.efMonths;
+  const goiY = {
+    no: p.debt > 0 ? "Số bạn đã nhập ở đầu tab này: còn <strong>" + money(p.debt) + "</strong> nợ xấu." : "",
+    quy: p.ef < mucTieu ? "Số bạn đã nhập: quỹ khẩn cấp <strong>" + money(p.ef) + "</strong> / mục tiêu " + money(mucTieu) + " (" + p.efMonths + " tháng chi tiêu)." : ""
+  };
+  GATE.forEach(g => {
+    const on = !!S.chon.gate[g.k];
+    const d = el("div", "chk plain" + (on ? " on" : ""));
+    d.innerHTML = '<label class="box" for="gate-' + g.k + '"><input type="checkbox" id="gate-' + g.k + '"' + (on ? " checked" : "") + '></label>' +
+      '<div><div class="t">' + g.t + '</div><div class="d">' + g.d + (goiY[g.k] ? "<br>" + goiY[g.k] : "") + '</div></div>';
+    d.querySelector("input").addEventListener("change", e => {
+      S.chon.gate[g.k] = e.target.checked; save(); renderGate();
+    });
+    host.appendChild(d);
+  });
+  const qua = GATE.filter(g => S.chon.gate[g.k]).length;
+  const mau = qua === 5 ? "var(--good)" : qua >= 3 ? "var(--brass)" : "var(--crit)";
+  const box = $("#gate-note"); box.innerHTML = "";
+  const wrap = el("div", "tiles");
+  wrap.style.marginTop = "16px";
+  const t = tile("Cửa đã qua", qua + " / 5",
+    qua === 5
+      ? "Qua hết. Giờ mới tới lúc bàn chuyện chọn mã — và bạn đang ở vị thế giữ được mười năm thật, chứ không phải giữ tới lần đầu có chuyện."
+      : "Còn " + (5 - qua) + " cửa. Làm xong phần này trước sẽ đổi kết quả mười năm nhiều hơn bất kỳ mã nào bạn chọn được ở dưới.",
+    mau);
+  t.insertAdjacentHTML("beforeend",
+    '<div class="meter"><i style="width:' + (qua/5*100) + '%;background:' + (qua === 5 ? "var(--good)" : "var(--brass)") + '"></i></div>');
+  wrap.appendChild(t); box.appendChild(wrap);
+}
+
+let uvLoai = "quy";
+$("#uv-loai").addEventListener("click", e => {
+  const b = e.target.closest("button[data-l]"); if(!b) return;
+  uvLoai = b.dataset.l;
+  for(const x of $("#uv-loai").children) x.setAttribute("aria-pressed", x.dataset.l === uvLoai ? "true" : "false");
+});
+$("#uv-add").addEventListener("click", () => {
+  const ma = $("#uv-ma").value.trim().toUpperCase();
+  if(!ma){ $("#uv-ma").focus(); return; }
+  const id = uid();
+  S.ungVien.push({id, ma, ten:$("#uv-ten").value.trim(), loai:uvLoai, d:{}});
+  S.chon.cham = id; save();
+  $("#uv-ma").value = ""; $("#uv-ten").value = ""; $("#uv-ma").focus();
+  renderUV(); renderCham(); renderChot();
+  toast("Đã thêm " + ma + ". Cuộn xuống bảng chấm điểm bên dưới.");
+});
+$("#uv-ma").addEventListener("keydown", e => { if(e.key === "Enter") $("#uv-add").click(); });
+$("#uv-ten").addEventListener("keydown", e => { if(e.key === "Enter") $("#uv-add").click(); });
+
+function renderUV(){
+  const host = $("#uv-list");
+  if(!S.ungVien.length){
+    host.innerHTML = '<p class="empty">Chưa có ứng viên nào. Thêm hai hoặc ba cái rồi chấm bằng cùng một thước — so sánh chỉ có nghĩa khi cả hai bên đều bị hỏi những câu như nhau.</p>';
+    return;
+  }
+  host.innerHTML = '<div class="uvlist">' + S.ungVien.map(u => {
+    const r = diemUV(u), nd = nhanDinhUV(r);
+    const la = S.chon.cua === u.id, dangCham = S.chon.cham === u.id;
+    return '<div class="uvrow' + (la ? " cua" : dangCham ? " cham" : "") + '">' +
+      '<div><div class="ma">' + esc(u.ma) + '</div><span class="pill">' + LOAI_TEN[u.loai] + '</span></div>' +
+      '<div>' + (u.ten ? '<div class="tn">' + esc(u.ten) + '</div>' : "") +
+        '<span class="pill ' + nd.pill + '">' + nd.t + '</span>' + (la ? ' <span class="pill ok">đã chốt</span>' : "") + '</div>' +
+      '<div><div class="sc">' + r.tong + '<span style="color:var(--ink3);font-size:13px">/' + r.toiDa + '</span></div>' +
+        '<div class="row" style="margin-top:6px;justify-content:flex-end">' +
+          '<button class="btn" data-cham="' + u.id + '">' + (dangCham ? "Đóng bảng chấm" : "Chấm điểm") + '</button>' +
+          '<button class="btn" data-chot="' + u.id + '">' + (la ? "Bỏ chốt" : "Chốt cái này") + '</button>' +
+          '<button class="xbtn" data-xoauv="' + u.id + '" aria-label="Xoá ' + esc(u.ma) + '">×</button>' +
+        '</div></div></div>';
+  }).join("") + '</div>';
+
+  host.querySelectorAll("[data-cham]").forEach(b => b.addEventListener("click", () => {
+    S.chon.cham = S.chon.cham === b.dataset.cham ? "" : b.dataset.cham;
+    save(); renderUV(); renderCham();
+  }));
+  host.querySelectorAll("[data-chot]").forEach(b => b.addEventListener("click", () => {
+    S.chon.cua = S.chon.cua === b.dataset.chot ? "" : b.dataset.chot;
+    save(); renderUV(); renderChot(); renderChonPlan(); renderMua();
+  }));
+  host.querySelectorAll("[data-xoauv]").forEach(b => b.addEventListener("click", () => {
+    const id = b.dataset.xoauv;
+    S.ungVien = S.ungVien.filter(u => u.id !== id);
+    if(S.chon.cua === id) S.chon.cua = "";
+    if(S.chon.cham === id) S.chon.cham = "";
+    save(); renderUV(); renderCham(); renderChot(); renderChonPlan(); renderMua();
+  }));
+}
+
+function renderCham(){
+  const card = $("#cham-card");
+  const u = S.ungVien.find(x => x.id === S.chon.cham);
+  if(!u){ card.hidden = true; $("#cham-list").innerHTML = ""; return; }
+  card.hidden = false;
+  const r = diemUV(u), nd = nhanDinhUV(r);
+
+  $("#cham-head").innerHTML =
+    '<h4 style="font-size:16px;margin-bottom:4px">Chấm ' + esc(u.ma) + (u.ten ? " — " + esc(u.ten) : "") + '</h4>' +
+    '<p style="font-size:13.5px;color:var(--ink2);max-width:70ch">Bộ tiêu chí cho <strong>' + LOAI_TEN[u.loai].toLowerCase() + '</strong>. Chỉ chấm <em>Đạt</em> khi bạn đã tự nhìn thấy bằng chứng, không phải khi bạn tin là vậy — chấm rộng tay thì điểm đẹp lên mà rủi ro không giảm đi chút nào.</p>' +
+    '<div class="row" style="margin-top:12px"><span class="pill">Đã chấm ' + r.daCham + '/' + r.tc.length + '</span>' +
+    '<div class="seg">' + Object.keys(LOAI_TEN).map(l =>
+      '<button data-doiloai="' + l + '" aria-pressed="' + (u.loai === l) + '">' + LOAI_TEN[l] + '</button>').join("") + '</div></div>';
+  $("#cham-head").querySelectorAll("[data-doiloai]").forEach(b => b.addEventListener("click", () => {
+    if(u.loai === b.dataset.doiloai) return;
+    u.loai = b.dataset.doiloai; u.d = {};
+    save(); renderUV(); renderCham(); renderChot();
+  }));
+
+  const host = $("#cham-list"); host.innerHTML = "";
+  let nhomTruoc = "";
+  r.tc.forEach(c => {
+    if(c.g !== nhomTruoc){
+      nhomTruoc = c.g;
+      const h = el("h5", "", c.g);
+      h.style.cssText = "font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);font-weight:600;margin:15px 0 -1px";
+      host.appendChild(h);
+    }
+    const v = u.d[c.k];
+    const row = el("div", "critrow" + (typeof v === "number" ? " v" + v : ""));
+    row.innerHTML =
+      '<div><div class="t">' + c.t + (c.must ? ' <span class="pill no">bắt buộc</span>' : "") + '</div>' +
+      '<div class="d">' + c.d + '</div></div>' +
+      '<div class="seg">' + MUC_CHAM.map(m =>
+        '<button data-tc="' + c.k + '" data-v="' + m.v + '" aria-pressed="' + (v === m.v) + '">' + m.t + '</button>').join("") + '</div>';
+    row.querySelectorAll("[data-tc]").forEach(b => b.addEventListener("click", () => {
+      const nv = Number(b.dataset.v);
+      if(u.d[c.k] === nv) delete u.d[c.k]; else u.d[c.k] = nv;
+      save(); renderUV(); renderCham(); renderChot();
+    }));
+    host.appendChild(row);
+  });
+
+  $("#cham-verdict").innerHTML =
+    '<div class="verdict" style="margin-top:18px;border-left-color:' + nd.mau + '">' +
+      '<div class="ic">' + nd.ic + '</div>' +
+      '<div><h5>' + nd.t + ' — ' + r.tong + '/' + r.toiDa + ' điểm</h5><p>' + nd.d + '</p></div></div>' +
+    '<p class="subtle">Bấm lại đúng nút đang chọn để bỏ câu trả lời đó. Đổi loại sẽ xoá hết điểm đã chấm, vì hai bộ tiêu chí không dùng chung được.</p>';
+}
+
+function xepHang(){
+  const xong = S.ungVien.filter(x => diemUV(x).xong).sort((a, b) => diemUV(b).pct - diemUV(a).pct);
+  if(xong.length < 2) return "";
+  return "Xếp theo điểm (chỉ tính cái đã chấm xong): " + xong.map(x => {
+    const r = diemUV(x);
+    return "<strong>" + esc(x.ma) + "</strong> " + r.tong + "/" + r.toiDa + (r.coDo.length ? " ⚑" : "");
+  }).join(" · ") + ". Điểm sát nhau thì đừng cố tách bằng số lẻ — chọn cái bạn hiểu rõ hơn.";
+}
+
+function renderChot(){
+  const box = $("#chot-box");
+  const u = S.ungVien.find(x => x.id === S.chon.cua);
+  const xh = xepHang();
+  if(!u){
+    box.innerHTML = '<div class="callout" style="margin-top:16px"><strong>Chưa chốt cái nào.</strong> ' +
+      'Chấm xong thì bấm “Chốt cái này” ở ứng viên bạn chọn. Kế hoạch mua đều bên dưới vẫn tính được, nhưng nó chỉ là con số chung cho tới khi có một cái tên gắn vào.' +
+      (xh ? '<br><br>' + xh : "") + '</div>';
+    return;
+  }
+  const r = diemUV(u), nd = nhanDinhUV(r);
+  box.innerHTML = '<div class="verdict" style="margin-top:16px;border-left-color:var(--brass)">' +
+    '<div class="ic">⚓</div><div><h5>Đã chốt: ' + esc(u.ma) + (u.ten ? " — " + esc(u.ten) : "") + '</h5>' +
+    '<p>' + LOAI_TEN[u.loai] + ' · ' + r.tong + '/' + r.toiDa + ' điểm · ' + nd.t + '. ' +
+    (u.loai === "cp"
+      ? "Đây là một cổ phiếu đơn lẻ — đọc kỹ phần “một thứ duy nhất có hai nghĩa” ở cuối trang trước khi dồn tiền vào."
+      : "Một quỹ rộng bên trong đã là nhiều doanh nghiệp, nên “một thứ” ở đây không đồng nghĩa với dồn hết vào một chỗ.") + '</p>' +
+    (xh ? '<p style="margin-top:8px">' + xh + '</p>' : "") + '</div></div>';
+}
+
+const CHON_FIELDS = [
+  ["pmt", "Mua mỗi tháng", "số tiền cố định, không đổi theo tâm trạng", "tr"],
+  ["nam", "Giữ trong", "mốc bạn tự đặt ra", "năm"],
+  ["ngay", "Ngày cố định trong tháng", "ngày nào cũng được, miễn luôn là ngày đó", "ngày"],
+  ["rate", "Tỷ suất kỳ vọng", "danh nghĩa, chưa trừ lạm phát", "%/năm"]
+];
+function thangNay(){ const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2, "0"); }
+function thangCong(ym, i){
+  const p = ym.split("-").map(Number);
+  const d = new Date(p[0], p[1] - 1 + i, 1);
+  return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2, "0");
+}
+const soDot = () => Math.min(600, Math.max(1, Math.round(num(S.chon.nam) * 12) || 1));
+
+function buildChonFields(){
+  const box = $("#chon-fields"); box.innerHTML = "";
+  CHON_FIELDS.forEach(f => {
+    const k = f[0], d = el("div", "field");
+    d.innerHTML = '<label for="ch-' + k + '">' + f[1] + ' <span class="hint">— ' + f[2] + '</span></label>' +
+      '<div class="inp"><input id="ch-' + k + '" type="number" inputmode="decimal" step="any" value="' + S.chon[k] + '"><span class="unit">' + f[3] + '</span></div>';
+    d.querySelector("input").addEventListener("input", e => {
+      S.chon[k] = num(e.target.value); save(); renderChonPlan(); renderMua();
+    });
+    box.appendChild(d);
+  });
+  const b = el("div", "field");
+  b.innerHTML = '<label for="ch-batdau">Bắt đầu từ tháng <span class="hint">— để đếm đúng số đợt đã mua</span></label>' +
+    '<div class="inp"><input id="ch-batdau" type="month" value="' + (S.chon.batDau || thangNay()) + '"></div>';
+  b.querySelector("input").addEventListener("input", e => {
+    S.chon.batDau = e.target.value; save(); renderChonPlan(); renderMua();
+  });
+  box.appendChild(b);
+}
+
+function renderChonPlan(){
+  const r = dca(S.chon.pmt, S.chon.nam, S.chon.rate, S.inp.swr);
+  const u = S.ungVien.find(x => x.id === S.chon.cua);
+  const ngay = Math.min(28, Math.max(1, Math.round(num(S.chon.ngay)) || 1));
+  const box = $("#chon-tiles"); box.innerHTML = "";
+
+  box.appendChild(tile("Sau " + yrs(r.soThang) + " — ước tính", money(r.dauTu),
+    money(r.pmt) + "/tháng × " + r.soThang + " đợt" + (u ? " vào " + esc(u.ma) : "") +
+    ", giả định " + dec(r.rate, 1) + "%/năm không đổi. Vốn bạn thật sự bỏ ra: " + money(r.tichLuy) + ".",
+    "var(--accent)", "hero"));
+  box.appendChild(tile("Vốn bỏ ra", money(r.tichLuy),
+    r.soThang + " đợt mua, mỗi đợt " + money(r.pmt) + " vào ngày " + ngay + " hằng tháng.", "var(--ink3)"));
+  box.appendChild(tile("Phần lãi kép làm ra", money(r.laiKep),
+    "Tổng cuối kỳ gấp " + dec(r.boi, 2) + " lần vốn bỏ ra. Toàn bộ phần chênh này là tiền công trả cho việc bạn không đụng vào.",
+    "var(--brass)"));
+  box.appendChild(tile("Rút " + dec(r.swr, 1) + "%/năm sau đó", money(r.thuNhap4pc) + "/th",
+    "Nếu áp quy tắc rút an toàn ở tab Ba cột mốc lên khối tài sản đó.", "var(--good)"));
+
+  $("#chon-note").innerHTML = "Đây là phép tính lãi kép với tỷ suất cố định, <strong>không phải dự báo</strong>. " +
+    "Thị trường thật đi theo chu kỳ: có năm âm hai mươi phần trăm, có năm dương ba mươi. Con số cuối kỳ ngoài đời gần như chắc chắn khác con số trên. " +
+    "Thứ đáng tin ở đây không phải giá trị tuyệt đối, mà là khoảng cách giữa " + money(r.tichLuy) + " và " + money(r.dauTu) +
+    " — nó cho thấy phần việc mà thời gian làm thay bạn, với điều kiện bạn để yên cho nó làm.";
+}
+
+function renderChon(){ renderGate(); renderUV(); renderCham(); renderChot(); renderChonPlan(); }
+
+/* ============================================================
+   KỶ LUẬT MỖI NGÀY · ĐỢT MUA HẰNG THÁNG
+   ============================================================ */
+const KL_VIEC = [
+  {k:"gia", t:"Hôm nay không mở bảng giá",
+   d:"Người giữ mười năm không cần biết hôm nay xanh hay đỏ. Mỗi lần mở bảng là một lần bạn cho cảm xúc cơ hội ra quyết định thay mình — và nó chỉ cần thắng đúng một lần là đủ phá cả kế hoạch."},
+  {k:"lenh", t:"Không đặt lệnh nào ngoài kế hoạch tháng",
+   d:"Kế hoạch có đúng một lệnh mỗi tháng, vào ngày đã chọn. Mọi lệnh khác đều là lệnh cảm xúc — kể cả lệnh có lý do nghe rất thuyết phục, vì lý do luôn được nghĩ ra sau khi tay đã ngứa."},
+  {k:"phim", t:"Không nghe phím hàng, không vào nhóm hô hào",
+   d:"Nguồn tin duy nhất đáng đọc về thứ bạn đang nắm là báo cáo do chính nó công bố. Người hô hào trong nhóm không chịu rủi ro cùng bạn, và không ai gọi điện báo bạn lúc họ bán ra."},
+  {k:"hoc", t:"Học mười lăm phút",
+   d:"Một thẻ cẩm nang, một phần báo cáo tài chính, một chương sách. Mười lăm phút mỗi ngày trong mười năm là hơn chín trăm giờ — thừa để biến bạn thành người hiểu việc mình đang làm."},
+  {k:"ghi", t:"Ghi lại một quan sát",
+   d:"Về doanh nghiệp, về ngành, hoặc về chính mình hôm nay. Vài năm sau đây là thứ duy nhất cho bạn biết mình đã tiến bộ ở chỗ nào — trí nhớ thì luôn kể lại theo hướng có lợi."}
+];
+function klKey(d){ return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0"); }
+function klNgay(k){ const r = S.kyLuat[k]; return (r && typeof r === "object") ? r : {}; }
+function klDon(){
+  // giữ 400 ngày gần nhất — đủ cho chuỗi và lịch 30 ngày, không để localStorage phình mãi
+  const g = new Date(); g.setDate(g.getDate() - 400);
+  const min = klKey(g);
+  for(const k in S.kyLuat){
+    const r = klNgay(k);
+    if(k < min || !KL_VIEC.some(v => r[v.k])) delete S.kyLuat[k];
+  }
+}
+function chuoiKhongXemGia(){
+  const d = new Date();
+  if(!klNgay(klKey(d)).gia) d.setDate(d.getDate() - 1);
+  let n = 0;
+  while(klNgay(klKey(d)).gia && n < 4000){ n++; d.setDate(d.getDate() - 1); }
+  return n;
+}
+function renderKyLuat(){
+  const hnay = klKey(new Date());
+  const host = $("#kl-list"); host.innerHTML = "";
+  KL_VIEC.forEach(v => {
+    const on = !!klNgay(hnay)[v.k];
+    const d = el("div", "chk plain" + (on ? " on" : ""));
+    d.innerHTML = '<label class="box" for="kl-' + v.k + '"><input type="checkbox" id="kl-' + v.k + '"' + (on ? " checked" : "") + '></label>' +
+      '<div><div class="t">' + v.t + '</div><div class="d">' + v.d + '</div></div>';
+    d.querySelector("input").addEventListener("change", e => {
+      const r = Object.assign({}, klNgay(hnay));
+      if(e.target.checked) r[v.k] = true; else delete r[v.k];
+      S.kyLuat[hnay] = r; klDon(); save(); renderKyLuat();
+    });
+    host.appendChild(d);
+  });
+
+  const xong = KL_VIEC.filter(v => klNgay(hnay)[v.k]).length;
+  const chuoi = chuoiKhongXemGia();
+  let tron = 0, coViec = 0;
+  const ngay = [];
+  for(let i = 29; i >= 0; i--){
+    const d = new Date(); d.setDate(d.getDate() - i);
+    const k = klKey(d), r = klNgay(k);
+    const c = KL_VIEC.filter(v => r[v.k]).length;
+    if(c === KL_VIEC.length) tron++;
+    if(c > 0) coViec++;
+    ngay.push({k, c, homNay:i === 0});
+  }
+
+  const box = $("#kl-tiles"); box.innerHTML = "";
+  box.appendChild(tile("Chuỗi ngày không mở bảng giá", chuoi + " ngày",
+    chuoi >= 30 ? "Đủ dài để thành thói quen thật. Đây chính là thứ tách người giữ được mười năm khỏi người định giữ mười năm."
+    : chuoi >= 7 ? "Đã qua tuần đầu — quãng khó nhất. Cảm giác “phải kiểm tra một cái thôi” sẽ nhạt dần từ đây."
+    : "Bắt đầu lại từ hôm nay cũng được. Chuỗi đứt không xoá đi phần đã học, nó chỉ đếm lại từ đầu.",
+    chuoi >= 7 ? "var(--good)" : "var(--brass)"));
+  const t2 = tile("Hôm nay", xong + " / " + KL_VIEC.length + " việc",
+    xong === KL_VIEC.length
+      ? "Trọn ngày. Không có gì để khoe — và đó đúng là điểm mấu chốt của cách đầu tư này."
+      : "Việc còn lại phần lớn là việc không làm gì, thường khó hơn việc phải làm.",
+    xong === KL_VIEC.length ? "var(--good)" : "var(--ink3)");
+  t2.insertAdjacentHTML("beforeend",
+    '<div class="meter"><i style="width:' + (xong/KL_VIEC.length*100) + '%;background:' + (xong === KL_VIEC.length ? "var(--good)" : "var(--brass)") + '"></i></div>');
+  box.appendChild(t2);
+  box.appendChild(tile("Ngày trọn vẹn / 30 ngày", tron + " / 30",
+    "Có ghi nhận ở " + coViec + " ngày. Không cần ngày nào cũng trọn vẹn — cần đủ đều để bạn không phải dựa vào ý chí.",
+    tron >= 20 ? "var(--good)" : tron >= 8 ? "var(--brass)" : "var(--ink3)"));
+
+  $("#kl-30").innerHTML = ngay.map(n => {
+    const bg = n.c === 0 ? "var(--surface-3)"
+      : "color-mix(in srgb, var(--accent) " + Math.round(25 + (n.c/KL_VIEC.length)*75) + "%, var(--surface-3))";
+    return '<i class="' + (n.homNay ? "today" : "") + '" style="background:' + bg + '" title="' + n.k + " — " + n.c + "/" + KL_VIEC.length + ' việc"></i>';
+  }).join("");
+  $("#kl-30-note").textContent = "Từ " + ngay[0].k + " tới " + ngay[29].k + ". Ô viền đồng thau là hôm nay.";
+}
+
+function renderMua(){
+  const bd = /^\d{4}-\d{2}$/.test(S.chon.batDau) ? S.chon.batDau : thangNay();
+  const tong = soDot(), nay = thangNay();
+  const trongKe = [];
+  for(let i = 0; i < tong; i++) trongKe.push(thangCong(bd, i));
+  const daMua = trongKe.filter(m => S.muaThang[m]).length;
+  const viTri = trongKe.indexOf(nay);
+  const roi = !!S.muaThang[nay];
+
+  $("#mua-row").innerHTML =
+    '<button class="btn' + (roi ? "" : " primary") + '" id="mua-toggle">' +
+      (roi ? "Bỏ đánh dấu tháng " + nay : "Đã mua đợt tháng " + nay) + '</button>' +
+    '<span class="pill ' + (roi ? "ok" : "warn") + '">' + (roi ? "Tháng này xong" : "Tháng này chưa mua") + '</span>' +
+    (viTri < 0 ? '<span class="pill no">Tháng này nằm ngoài khoảng kế hoạch</span>' : "");
+  $("#mua-toggle").addEventListener("click", () => {
+    if(S.muaThang[nay]) delete S.muaThang[nay]; else S.muaThang[nay] = true;
+    save(); renderMua();
+  });
+
+  const box = $("#mua-tiles"); box.innerHTML = "";
+  const t1 = tile("Đã mua", daMua + " / " + tong + " đợt",
+    daMua === 0 ? "Chưa có đợt nào. Đợt đầu tiên là đợt khó nhất — mọi đợt sau chỉ là lặp lại một việc đã biết làm."
+    : daMua >= tong ? "Xong trọn kế hoạch. Việc còn lại là quyết định có đặt tiếp một kế hoạch nữa hay không."
+    : "Còn " + (tong - daMua) + " đợt. Đừng nhìn con số này như quãng đường phải đi — nhìn như số lần bạn chỉ cần lặp lại đúng một thao tác.",
+    daMua >= tong ? "var(--good)" : "var(--accent)");
+  t1.insertAdjacentHTML("beforeend",
+    '<div class="meter"><i style="width:' + Math.min(100, daMua/tong*100) + '%;background:' + (daMua >= tong ? "var(--good)" : "var(--accent)") + '"></i></div>');
+  box.appendChild(t1);
+  box.appendChild(tile("Vốn đã bỏ vào", money(daMua * num(S.chon.pmt)),
+    "Theo mức " + money(S.chon.pmt) + "/đợt trong kế hoạch. Đợt nào bạn mua khác mức đó thì con số này chỉ là ước lượng.", "var(--ink3)"));
+
+  const grid = $("#mua-grid");
+  grid.innerHTML = trongKe.map(m => {
+    const on = !!S.muaThang[m];
+    return '<button type="button" class="' + (on ? "on" : "") + (m === nay ? " now" : "") + '" data-mua="' + m +
+      '" title="' + m + (on ? " — đã mua" : "") + '" aria-pressed="' + on + '">' + m.slice(5) + '</button>';
+  }).join("");
+  grid.onclick = e => {
+    const b = e.target.closest("[data-mua]"); if(!b) return;
+    const m = b.dataset.mua;
+    if(S.muaThang[m]) delete S.muaThang[m]; else S.muaThang[m] = true;
+    save(); renderMua();
+  };
+
+  const ngoai = Object.keys(S.muaThang).filter(m => trongKe.indexOf(m) < 0).length;
+  $("#mua-note").innerHTML = "Số trong ô là tháng, đọc theo hàng từ " + trongKe[0] + " tới " + trongKe[trongKe.length-1] +
+    ". Ô viền đồng thau là tháng này." +
+    (ngoai ? " Có " + ngoai + " tháng đã đánh dấu nằm ngoài khoảng kế hoạch — sửa ô “Bắt đầu từ tháng” hoặc số năm ở tab Con số nếu muốn tính cả chúng." : "");
+}
+
+/* ============================================================
    KNOWLEDGE BASE
    ============================================================ */
 let kbFilter = "Tất cả", kbQuery = "";
@@ -3797,6 +4427,7 @@ function renderTuDo(){
 function renderNumbers(){
   renderCalc(); renderTrack(); renderCows();
   renderBudget(); renderSanNong(); renderRungs(); renderSrcTiles(); renderDCA(); renderNha();
+  renderChon(); renderMua();
 }
 function renderAll(){
   buildFields("#f1", FIELDS_1);
@@ -3805,6 +4436,7 @@ function renderAll(){
   renderMap(); renderKB(); renderLevels();
   renderSrcs(); renderLessons(); renderIkigai(); buildDcaFields(); buildNhaFields();
   showTpane(); renderTuSoi();
+  buildChonFields(); textGrid("#luan-grid", LUAN_Q, S.chon); renderKyLuat();
   $("#tudo-so").value = S.tuDo.so; $("#tudo-ghi").value = S.tuDo.ghi; $("#tiec-box").value = S.tiec;
   renderNumbers(); drawChart();
 }

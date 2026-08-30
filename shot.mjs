@@ -11,11 +11,14 @@ import { resolve } from "node:path";
 import { tmpdir } from "node:os";
 
 const CHROME = [
+  process.env.CHROME,
   "C:/Program Files/Google/Chrome/Application/chrome.exe",
   "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe",
-  "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"
-].find(existsSync);
-if (!CHROME) { console.error("Không tìm thấy Chrome hoặc Edge."); process.exit(1); }
+  "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe",
+  "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+  "/usr/bin/google-chrome", "/usr/bin/chromium", "/usr/bin/chromium-browser"
+].filter(Boolean).find(existsSync);
+if (!CHROME) { console.error("Không tìm thấy Chrome hoặc Edge. Đặt biến môi trường CHROME trỏ tới file thực thi."); process.exit(1); }
 
 const arg = k => (process.argv.find(a => a.startsWith("--" + k + "=")) || "").split("=").slice(1).join("=");
 const FILE = existsSync("app/index.html") ? "app/index.html" : "La-Ban-Tu-Do-Tai-Chinh.html";
@@ -123,6 +126,33 @@ const SAMPLE = `(()=>{
   ik('a','Viết lách, dạy học, dựng công cụ nhỏ');ik('b','Phân tích số liệu và giải thích cho người không chuyên');
   ik('c','Người trẻ không ai chỉ cho cách quản lý tiền');ik('d','Tư vấn và xây phần mềm nội bộ');
   [1,2,3,4,5].forEach(n=>{const t=document.querySelectorAll('#roadmap .tick')[n-1];if(t)t.click();});
+
+  /* --- Chọn một thứ: hai ứng viên, chấm gần đủ, chốt cái đầu --- */
+  document.querySelector('#tabs button[data-t="calc"]').click();
+  document.querySelector('#cnav button[data-c="chon"]').click();
+  ['no','quy','nhanroi','giam50','khongvay'].forEach(k=>{
+    const c=document.getElementById('gate-'+k);if(c&&!c.checked)c.click();});
+  const themUV=(loai,ma,ten)=>{
+    document.querySelector('#uv-loai button[data-l="'+loai+'"]').click();
+    set('uv-ma',ma);set('uv-ten',ten);document.getElementById('uv-add').click();};
+  themUV('quy','E1VFVN30','Quỹ ETF mô phỏng một chỉ số rộng');
+  const chamHet=v=>document.querySelectorAll('#cham-list .critrow').forEach((r,i)=>{
+    const b=r.querySelector('[data-v="'+(i%4===3?v-1:v)+'"]');if(b)b.click();});
+  chamHet(2);
+  themUV('cp','ABC','Một doanh nghiệp sản xuất giả định');
+  chamHet(2);
+  const dau=document.querySelector('#uv-list .uvrow [data-chot]');if(dau)dau.click();
+  set('ch-pmt',5);set('ch-nam',10);set('ch-ngay',5);set('ch-rate',10);
+
+  /* --- Kỷ luật mỗi ngày: tick hôm nay, đánh dấu vài đợt mua --- */
+  document.querySelector('#tabs button[data-t="track"]').click();
+  document.querySelector('#tnav button[data-p="kyluat"]').click();
+  ['gia','lenh','phim','hoc'].forEach(k=>{
+    const c=document.getElementById('kl-'+k);if(c&&!c.checked)c.click();});
+  /* lưới tự dựng lại sau mỗi lần bấm, nên phải tìm lại nút mỗi vòng */
+  for(let i=0;i<7;i++){const nut=document.querySelectorAll('#mua-grid button')[i];if(nut)nut.click();}
+  document.querySelector('#tnav button[data-p="log"]').click();
+  document.querySelector('#tabs button[data-t="map"]').click();
   return 'ok';
 })()`;
 
@@ -160,6 +190,18 @@ const KIEM = `(()=>{const g=s=>{const n=document.querySelector(s);return n?n.tex
   o.pri=document.querySelectorAll('#pri-list .chk').length+' nguyên tắc · '+
         document.querySelectorAll('#mis-list .chk').length+' sai lầm · '+
         document.querySelectorAll('#env-list .envrow').length+' môi trường';
+  document.querySelector('#cnav button[data-c="chon"]').click();
+  o.gate=g('#gate-note .tile .v');
+  o.chon=[...document.querySelectorAll('#chon-tiles .tile .v')].map(n=>n.textContent).join(' · ');
+  o.uv=[...document.querySelectorAll('#uv-list .uvrow')].map(r=>
+        r.querySelector('.ma').textContent+' '+r.querySelector('.sc').textContent.replace(/\s+/g,'')).join(' | ');
+  o.chamSo=document.querySelectorAll('#cham-list .critrow').length+' tiêu chí đang chấm';
+  document.querySelector('#tabs button[data-t="track"]').click();
+  document.querySelector('#tnav button[data-p="kyluat"]').click();
+  o.kyLuat=[...document.querySelectorAll('#kl-tiles .tile .v')].map(n=>n.textContent).join(' · ');
+  o.mua=[...document.querySelectorAll('#mua-tiles .tile .v')].map(n=>n.textContent).join(' · ')+
+        ' · lưới '+document.querySelectorAll('#mua-grid button').length+' ô';
+  o.dot30=document.querySelectorAll('#kl-30 i').length+' ô ngày';
   document.querySelector('#tnav button[data-p="ngam"]').click();
   o.ngam=document.querySelectorAll('#ba-thu textarea').length+' ô ba thứ · '+
          document.querySelectorAll('#val-grid textarea').length+' câu hỏi · '+
@@ -224,7 +266,7 @@ for (const [tenVP, w] of [["desktop", 1180], ["mobile", 360]]) {
       }
     }
     if (tenVP === "desktop") {
-      for (const c of ["ngansach", "aiban", "dca", "nha"]) {
+      for (const c of ["ngansach", "aiban", "dca", "chon", "nha"]) {
         const has = await cdp.evalJS(`(()=>{const b=document.querySelector('#cnav button[data-c="${c}"]');
           if(!b)return false;document.querySelector('#tabs button[data-t="calc"]').click();b.click();window.scrollTo(0,0);return true;})()`);
         if (has) { await sleep(220); shots.push(await cdp.shot(`desktop-${ten}-${c}`)); }

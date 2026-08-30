@@ -9,11 +9,14 @@ import { resolve } from "node:path";
 import { tmpdir } from "node:os";
 
 const CHROME = [
+  process.env.CHROME,
   "C:/Program Files/Google/Chrome/Application/chrome.exe",
   "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe",
-  "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"
-].find(existsSync);
-if (!CHROME) { console.error("Không tìm thấy Chrome hoặc Edge."); process.exit(1); }
+  "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe",
+  "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+  "/usr/bin/google-chrome", "/usr/bin/chromium", "/usr/bin/chromium-browser"
+].filter(Boolean).find(existsSync);
+if (!CHROME) { console.error("Không tìm thấy Chrome hoặc Edge. Đặt biến môi trường CHROME trỏ tới file thực thi."); process.exit(1); }
 
 const WEB = 8137, PORT = 9701;
 const PROFILE = resolve(tmpdir(), "htdtc-pwa-" + process.pid);

@@ -1,7 +1,12 @@
 # La Bàn Tự Do Tài Chính
 
-Ứng dụng web cá nhân giúp theo dõi hành trình tới tự do tài chính: bản đồ 12 bước, năm máy tính
+Ứng dụng web cá nhân giúp theo dõi hành trình tới tự do tài chính: bản đồ 12 bước, sáu máy tính
 tài chính, nhật ký theo dõi, các biểu mẫu tự soi, và một cẩm nang 196 thẻ để tra cứu.
+
+Có thêm một bộ khung để **chọn nơi bỏ tiền dài hạn rồi giữ kỷ luật với nó**: năm cửa phải qua
+trước khi chọn, bảng chấm điểm ứng viên (12 tiêu chí cho cổ phiếu, 8 cho quỹ / ETF) với cơ chế
+cờ đỏ phủ quyết điểm tổng, kế hoạch mua đều theo tháng, và một checklist hằng ngày về *hành vi*
+chứ không phải về giá.
 
 Chạy được offline, cài được lên điện thoại Android như một app thật.
 
@@ -56,6 +61,8 @@ node test-pwa.mjs    # manifest, service worker, tắt mạng vẫn chạy
 
 Không dependency, không npm, không build step thật sự — `build.mjs` chỉ kiểm tra rồi sao chép.
 Bộ kiểm thử lái Chrome có sẵn trên máy qua DevTools Protocol bằng `WebSocket` của Node 22+.
+Nó tự dò Chrome ở các đường dẫn quen thuộc trên Windows, macOS và Linux; máy nào cài chỗ khác thì
+đặt biến môi trường `CHROME` trỏ thẳng vào file thực thi.
 
 Thử ở máy trước khi đẩy lên:
 
@@ -82,3 +89,8 @@ tính của bảng tính gốc — lý do ghi trong `APP-GUIDE.md` mục 6.
 tài chính, không phải lời khuyên mua bán bất động sản.** Quy tắc 4% là một quy ước phổ biến chứ
 không phải bảo đảm. Mọi mô hình trong app đều dựa trên giả định do người dùng nhập vào, và các
 giả định đó có thể sai.
+
+Riêng phần **Chọn một thứ**: app không nối mạng, không có dữ liệu thị trường, và **không gợi ý
+mã nào cả**. Nó chỉ là một bộ câu hỏi có cấu trúc — điểm số phản ánh đúng những gì người dùng
+tự đi kiểm chứng được, không hơn. Chấm rộng tay thì điểm cao lên mà rủi ro không giảm đi chút
+nào.

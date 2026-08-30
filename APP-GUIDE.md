@@ -13,15 +13,18 @@ cộng thêm lớp vỏ PWA để cài được lên Android. Toàn bộ HTML + 
 |---|---|
 | Học và tra cứu kiến thức | Tab **Cẩm nang** — 196 thẻ, 51 nhóm, tìm kiếm tức thì |
 | Biết mình đang ở đâu | Tab **Bản đồ** — 12 bước, 4 giai đoạn, ba nấc cuối tính tự động |
-| Biết con số phải đạt | Tab **Con số của tôi** — 5 máy tính trong 5 pane phụ |
-| Theo dõi & tự soi | Tab **Theo dõi** — 4 pane phụ: nhật ký · bảy nguồn · tự chấm · suy ngẫm |
+| Biết con số phải đạt | Tab **Con số của tôi** — 6 máy tính trong 6 pane phụ |
+| Chọn nơi bỏ tiền dài hạn | Pane **Chọn một thứ** — 5 cửa gác, bộ chấm điểm 12/8 tiêu chí, kế hoạch mua đều |
+| Giữ được kỷ luật | Pane **Kỷ luật mỗi ngày** — 5 việc hằng ngày, chuỗi ngày, lưới đợt mua theo tháng |
+| Theo dõi & tự soi | Tab **Theo dõi** — 5 pane phụ: nhật ký · kỷ luật · bảy nguồn · tự chấm · suy ngẫm |
 | Dữ liệu riêng tư | `localStorage`, không gửi đi đâu; xuất/nhập JSON bằng tay |
 | Cài lên điện thoại | PWA: manifest + service worker, chạy được khi mất mạng |
 
-**Năm máy tính trong tab Con số** (thanh chọn phụ `#cnav`): Ba cột mốc · Ngân sách 50/30/20 ·
-Bạn đang là ai · Máy tính DCA · Mua hay thuê nhà.
+**Sáu máy tính trong tab Con số** (thanh chọn phụ `#cnav`): Ba cột mốc · Ngân sách 50/30/20 ·
+Bạn đang là ai · Máy tính DCA · **Chọn một thứ** · Mua hay thuê nhà.
 
-**Bốn pane trong tab Theo dõi** (thanh chọn phụ `#tnav`): Nhật ký · Bảy nguồn thu · Tự chấm · Suy ngẫm.
+**Năm pane trong tab Theo dõi** (thanh chọn phụ `#tnav`): Nhật ký · **Kỷ luật mỗi ngày** ·
+Bảy nguồn thu · Tự chấm · Suy ngẫm.
 
 > Vẫn giữ đúng **5 tab chính** như thiết kế gốc — mọi thứ thêm vào đều nằm trong pane phụ,
 > không đẻ thêm tab.
@@ -162,9 +165,26 @@ const KEY = "htdtc.v1";
   tuoi:    0,                                // timeline 18–35
   tuDo:    { so:"", ghi:"" },                // con số nào đủ để BẠN tự do
   tiec:    "",                               // nếu 80 tuổi nhìn lại
+
+  // ----- thêm ở chặng "chọn một thứ", khoá localStorage VẪN LÀ htdtc.v1 -----
+  chon:    { cua:"id", cham:"id", gate:{no:true},   // ứng viên đã chốt · đang chấm · năm cửa
+             pmt:5, nam:10, rate:10, ngay:5,        // kế hoạch mua đều, pmt tính bằng TRIỆU ₫
+             batDau:"2026-08",                      // tháng bắt đầu; rỗng = tháng hiện tại
+             luan:"", ban:"" },                     // luận điểm mua · điều kiện bán
+  ungVien: [ {id, ma:"E1VFVN30", ten:"", loai:"quy", d:{rong:2, phi:1}} ],
+  kyLuat:  { "2026-08-30": {gia:true, hoc:true} },  // việc mỗi ngày, giữ 400 ngày gần nhất
+  muaThang:{ "2026-08": true },                     // đã mua đợt của tháng đó chưa
+
   ui:      { cpane:"moc", tpane:"log", saoLuu:"2026-08-29" }
 }
 ```
+
+**`d` trong `ungVien`:** điểm từng tiêu chí, chỉ nhận `0` (chưa đạt) · `1` (chưa chắc) · `2` (đạt).
+Khoá **không tồn tại** nghĩa là chưa trả lời — khác hẳn với `0`. Đừng đổi sang mặc định `0`:
+cả bộ này dựa vào việc phân biệt "chấm rồi, không đạt" với "chưa đi tìm hiểu".
+
+**`kyLuat` tự dọn:** `klDon()` xoá ngày cũ hơn 400 ngày và ngày không tick gì, chạy sau mỗi lần
+tick. Không có nó thì sau mười năm là 3650 khoá rác trong `localStorage` và trong file sao lưu.
 
 **Ô nhập mới trong `inp`:** `debtPay` — tổng tiền trả nợ mỗi tháng, dùng cho cảnh báo
 tỷ lệ trả nợ / thu nhập vượt 40%.
@@ -225,6 +245,12 @@ Toàn bộ JS nằm trong một IIFE `(() => { ... })()` ở cuối file, chia k
 | **`renderPains`** | danh sách vấn đề | |
 | **`renderTuDo`** | con số nào đủ để BẠN tự do | |
 | **`ghiNhoSaoLuu / renderNhacSaoLuu`** | nhắc sao lưu định kỳ | |
+| **`GATE / TC_CP / TC_QUY / MUC_CHAM`** | năm cửa gác + hai bộ tiêu chí (12 cho cổ phiếu, 8 cho quỹ) | **sửa tiêu chí chấm điểm ở đây** |
+| **`diemUV / nhanDinhUV`** | cộng điểm và ra nhận định; cờ đỏ `must` phủ quyết điểm tổng | đổi ngưỡng 60/80% |
+| **`renderGate / renderUV / renderCham / renderChot`** | giao diện pane Chọn một thứ | |
+| **`CHON_FIELDS / buildChonFields / renderChonPlan`** | kế hoạch mua đều — dùng lại `dca()` | |
+| **`KL_VIEC / klKey / klNgay / klDon / chuoiKhongXemGia`** | năm việc mỗi ngày + chuỗi ngày + dọn dữ liệu cũ | |
+| **`renderKyLuat / renderMua`** | lịch 30 ngày và lưới đợt mua theo tháng | |
 | `renderKB` | tìm kiếm + lọc cẩm nang | |
 | `exp / imp / clr` | xuất nhập dữ liệu | |
 | **`renderNumbers`** | mọi thứ phụ thuộc ô nhập số — gọi lại sau mỗi lần gõ | **thêm render phụ thuộc số vào đây** |
@@ -552,6 +578,14 @@ Muốn khoá hẳn bằng mật khẩu thì phải đổi sang **Cloudflare Page
 - [x] **Ba nấc cuối tính tự động** trong tab Bản đồ + nhãn "bốn giai đoạn đo bốn thứ khác nhau"
 - [x] **Checklist 10 bài học đầu tư** chia 3 nhóm
 
+**Chọn nơi bỏ tiền dài hạn:**
+- [x] **Pane "Chọn một thứ"** — 5 cửa gác (nối thẳng vào `inp.debt` và `inp.ef`), sổ ứng viên,
+      bộ chấm điểm 12 tiêu chí cho cổ phiếu / 8 cho quỹ–ETF, cờ đỏ phủ quyết, xếp hạng, chốt một
+- [x] **Kế hoạch mua đều** — số tiền · số năm · ngày cố định · tháng bắt đầu, dùng lại `dca()`
+- [x] **Hai ô luận điểm** — vì sao mua · điều gì thì bán, viết trước khi hoảng
+- [x] **Pane "Kỷ luật mỗi ngày"** — 5 việc hằng ngày, chuỗi ngày không mở bảng giá,
+      lịch 30 ngày, lưới đợt mua theo tháng nối vào kế hoạch
+
 **Ưu tiên trung bình (A2):**
 - [x] Cảnh báo **tỷ lệ trả nợ / thu nhập vượt 40%**
 - [x] Ô nhập **"3 thứ quan trọng nhất với bạn"**
@@ -613,6 +647,12 @@ Muốn khoá hẳn bằng mật khẩu thì phải đổi sang **Cloudflare Page
    sẽ bị dùng sai. App không đưa ra lời khuyên đầu tư hay lời khuyên bất động sản.
 5. **Ghi nguồn.** Nội dung là đúc kết từ series của Hieu Nguyen (HIEU.TV) — giữ phần
    ghi nguồn ở footer, và luôn viết lại bằng lời của mình chứ không chép nguyên văn.
+6. **Pane "Chọn một thứ" không được biến thành máy gợi ý mã.** App không nối mạng và không có
+   dữ liệu thị trường — nó chỉ chấm lại những gì người dùng tự kiểm chứng được. Không thêm tên
+   mã cụ thể vào mã nguồn, không nhúng bảng giá, không gọi API nào. Ba khối phải giữ nguyên:
+   cờ đỏ `must` phủ quyết điểm tổng; thẻ "một thứ duy nhất có hai nghĩa" (rủi ro riêng của một
+   doanh nghiệp là rủi ro không được trả công); và khối "lấy số ở đâu" nhấn rằng số dùng để ra
+   quyết định phải soi lại trong báo cáo gốc.
 
 
 ---
