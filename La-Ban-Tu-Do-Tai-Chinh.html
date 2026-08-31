@@ -233,6 +233,9 @@ tr.hi td{background:var(--accent-soft)}
 .row{display:flex; gap:9px; flex-wrap:wrap; align-items:center}
 .foot{margin-top:44px; padding-top:20px; border-top:1px solid var(--line); font-size:12.5px; color:var(--ink3); line-height:1.65}
 .foot a{color:var(--accent)}
+.secbtn{border:0;background:transparent;color:var(--ink2);font:600 13px/1 "Be Vietnam Pro",sans-serif;padding:9px 15px;border-radius:7px;cursor:pointer;min-height:38px;-webkit-tap-highlight-color:transparent}
+.secbtn:hover{color:var(--ink)}
+.secbtn[aria-pressed="true"]{background:var(--ink); color:var(--ground)}
 .callout{background:var(--surface-2); border-left:3px solid var(--brass); padding:13px 16px; border-radius:0 8px 8px 0; font-size:13.5px; color:var(--ink2)}
 .logrow{display:grid; grid-template-columns:1.1fr 1fr 1fr auto; gap:9px; align-items:end}
 @media (max-width:640px){
@@ -437,6 +440,7 @@ nav.tabs button, .btn, .chips button, .subtabs button{min-height:44px}
     <nav class="tabs" id="tabs" aria-label="Khu vực">
       <button data-t="map" aria-current="true"><span class="full">Bản đồ</span><span class="short">Bản đồ</span></button>
       <button data-t="calc"><span class="full">Con số của tôi</span><span class="short">Con số</span></button>
+      <button data-t="screen">Bộ lọc</button>
       <button data-t="track"><span class="full">Theo dõi</span><span class="short">Theo dõi</span></button>
       <button data-t="kb"><span class="full">Cẩm nang</span><span class="short">Cẩm nang</span></button>
       <button data-t="data"><span class="full">Dữ liệu</span><span class="short">Dữ liệu</span></button>
@@ -708,6 +712,61 @@ nav.tabs button, .btn, .chips button, .subtabs button{min-height:44px}
     </div>
   </div>
 
+</section>
+
+<!-- ============ SCREEN ============ -->
+<section class="panel" id="p-screen" hidden>
+  <div class="sect-head"><span class="eyebrow">Tự soi</span></div>
+  <h2 style="font-size:28px;letter-spacing:-.028em;margin-bottom:10px">Bộ lọc cổ phiếu</h2>
+  <p class="lede">Nhập số của một mã bất kỳ. Công cụ chấm <strong>hai điểm số tách riêng</strong> — giá trị và động lượng — và cố ý <strong>không bao giờ cộng chúng lại</strong>. Vì khi cộng lại, hai tín hiệu trái ngược sẽ triệt tiêu nhau và bạn mất đi thông tin quan trọng nhất: chúng đang mâu thuẫn.</p>
+
+  <div class="card pad" style="margin-top:22px">
+    <div class="field" style="max-width:260px">
+      <label for="sc-ticker">Mã cổ phiếu <span class="hint">— chỉ để bạn dễ nhớ</span></label>
+      <div class="inp"><input id="sc-ticker" type="text" maxlength="12" placeholder="VD: ABC" autocomplete="off"></div>
+    </div>
+
+    <h5 style="margin:20px 0 8px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3)">Ngành</h5>
+    <div id="sc-sector" role="group" aria-label="Chọn ngành" style="display:inline-flex;gap:2px;padding:3px;background:var(--surface-3);border-radius:9px">
+      <button type="button" class="secbtn" data-sec="normal">Doanh nghiệp thường</button>
+      <button type="button" class="secbtn" data-sec="bank">Ngân hàng</button>
+    </div>
+    <div class="note" id="sc-secnote"></div>
+
+    <h5 style="margin:20px 0 2px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3)">Nhóm 1 — số liệu giá trị</h5>
+    <div class="grid2" id="scf-v"></div>
+    <div class="grid2" id="scf-sec" style="margin-top:0"></div>
+    <div id="scf-trendwrap" hidden>
+      <h5 style="margin:18px 0 2px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3)">Nợ xấu hai quý trước <span style="text-transform:none;letter-spacing:0;font-weight:400">— chỉ dùng để phát hiện xu hướng, không chấm điểm</span></h5>
+      <div class="grid2" id="scf-trend"></div>
+    </div>
+
+    <h5 style="margin:20px 0 2px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3)">Nhóm 2 — số liệu động lượng và sự kiện</h5>
+    <div class="grid2" id="scf-m"></div>
+    <label style="display:flex;align-items:center;gap:9px;margin-top:12px;font-size:13.5px;cursor:pointer">
+      <input id="sc-ftse" type="checkbox" style="width:17px;height:17px;accent-color:var(--accent)">
+      Nằm trong danh sách ứng viên được nhắc tới quanh đợt nâng hạng FTSE
+    </label>
+
+    <h5 style="margin:20px 0 2px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3)">Mốc đối chiếu</h5>
+    <div class="grid2" id="scf-r"></div>
+    <div class="note">Bỏ trống ô nào thì tiêu chí đó không được chấm — mẫu số sẽ tự co lại. Công cụ không đoán thay bạn.</div>
+  </div>
+
+  <div class="tiles" style="margin-top:18px" id="sctiles"></div>
+
+  <div id="scverdict" style="margin-top:18px"></div>
+
+  <div class="card pad" style="margin-top:18px">
+    <h3 style="font-size:17px;margin-bottom:2px">Chi tiết từng tiêu chí</h3>
+    <div class="tblwrap"><table id="sctable"><thead><tr><th>Tiêu chí</th><th>Bạn nhập</th><th>Điểm</th><th style="text-align:left">Ghi chú</th></tr></thead><tbody></tbody></table></div>
+  </div>
+
+  <div id="scflags" style="margin-top:18px"></div>
+
+  <div class="callout" style="margin-top:18px">
+    Đây là công cụ tự đánh giá, <strong>không phải lời khuyên đầu tư</strong>. Điểm số chỉ phản ánh đúng những con số bạn nhập vào — nó không kiểm chứng được số liệu, không biết gì về ngành, ban lãnh đạo hay chất lượng lợi nhuận, và không dự báo giá. Các ngưỡng chấm điểm là quy ước lấy từ cẩm nang này, không phải chuẩn mực ngành. Riêng chế độ ngân hàng: kể cả khi đủ CAR, nợ xấu và bao phủ, công cụ vẫn <strong>không thấy</strong> mức độ tập trung danh mục cho vay, tỷ trọng cho vay bất động sản, nợ tái cơ cấu chưa chuyển nhóm, cho vay bên liên quan, hay chất lượng nguồn vốn. Đó là những thứ làm sập một ngân hàng, và không ô nào ở trên đo được chúng.
+  </div>
 </section>
 
 <!-- ============ TRACK ============ -->
@@ -2111,6 +2170,9 @@ const DEF = {
   tuoi:0,                               // tuổi hiện tại, cho timeline 18–35
   tuDo:{so:"", ghi:""},                 // con số nào đủ để bạn TỰ DO
   tiec:"",                              // nếu 80 tuổi nhìn lại
+  scr:{ticker:"", sector:"normal", cap:null, pe:null, pb:null, roe:null, de:null,
+       car:null, npl:null, pcr:null, npl1:null, npl2:null,
+       froom:null, chg12:null, deposit:5.5, ftse:false},
   ui:{cpane:"moc", tpane:"log"}         // pane nào đang mở trong tab Con số / Theo dõi
 };
 let S = load();
@@ -2124,6 +2186,7 @@ function merge(p){
   return {...b, ...p,
     inp:{...b.inp, ...obj(p.inp)},
     ui:{...b.ui, ...obj(p.ui)},
+    scr:{...b.scr, ...obj(p.scr)},
     ikigai:{...b.ikigai, ...obj(p.ikigai)},
     dca:{...b.dca, ...obj(p.dca)},
     nha:{...b.nha, ...obj(p.nha), phi:{...b.nha.phi, ...obj(obj(p.nha).phi)}},
@@ -2217,7 +2280,7 @@ function calc(){
 /* ============================================================
    TABS
    ============================================================ */
-const PANELS = {map:"#p-map", calc:"#p-calc", track:"#p-track", kb:"#p-kb", data:"#p-data"};
+const PANELS = {map:"#p-map", calc:"#p-calc", screen:"#p-screen", track:"#p-track", kb:"#p-kb", data:"#p-data"};
 $("#tabs").addEventListener("click", e => {
   const b = e.target.closest("button[data-t]"); if(!b) return;
   for(const x of $("#tabs").children) x.setAttribute("aria-current", x === b ? "true" : "false");
@@ -3798,10 +3861,298 @@ function renderNumbers(){
   renderCalc(); renderTrack(); renderCows();
   renderBudget(); renderSanNong(); renderRungs(); renderSrcTiles(); renderDCA(); renderNha();
 }
+/* ============================================================
+   BỘ LỌC CỔ PHIẾU — hai luồng tín hiệu, cố ý không cộng lại
+   ============================================================ */
+const SCR_V = [
+  ["cap",  "Vốn hoá",          "tổng giá trị thị trường",       "tỷ"],
+  ["pe",   "P/E",              "giá / lợi nhuận 4 quý gần nhất","lần"],
+  ["pb",   "P/B",              "giá / giá trị sổ sách",         "lần"],
+  ["roe",  "ROE",              "lợi nhuận / vốn chủ sở hữu",    "%"]
+];
+/* nhóm phụ thuộc ngành — thay nhau, không bao giờ hiện cùng lúc */
+const SCR_SEC = {
+  normal: [["de",  "Nợ vay / Vốn chủ", "chỉ tính nợ vay có lãi",      "lần"]],
+  bank:   [["car", "CAR",              "hệ số an toàn vốn",           "%"],
+           ["npl", "Tỷ lệ nợ xấu",     "NPL, nhóm 3–5",               "%"],
+           ["pcr", "Bao phủ nợ xấu",   "PCR, dự phòng / nợ xấu",      "%"]]
+};
+const SCR_TREND = [
+  ["npl1", "Nợ xấu quý trước",     "kỳ liền trước", "%"],
+  ["npl2", "Nợ xấu 2 quý trước",   "kỳ trước nữa",  "%"]
+];
+const SEC_NOTE = {
+  normal: "Chế độ doanh nghiệp thường. Đòn bẩy đo bằng <strong>nợ vay có lãi ÷ vốn chủ</strong> — không tính phải trả người bán, vì đó không phải đòn bẩy tài chính.",
+  bank:   "Chế độ ngân hàng. Ô <strong>Nợ vay / Vốn chủ</strong> bị gỡ bỏ vì với ngân hàng, tiền gửi khách hàng chính là nguồn vốn kinh doanh — mọi ngân hàng đều có tỷ lệ 5–10 lần và tiêu chí đó sẽ đánh trượt tất cả. Thay bằng <strong>CAR</strong>, và thêm <strong>nợ xấu</strong> cùng <strong>tỷ lệ bao phủ</strong> — hai chỉ số rủi ro thật sự của một ngân hàng. Thang P/B cũng đổi: vùng tối ưu của ngân hàng là <strong>1,0–1,4</strong>, không phải 0,7–1,5."
+};
+const SCR_M = [
+  ["froom","Room ngoại còn lại","phần khối ngoại chưa dùng",    "%"],
+  ["chg12","Đà giá 12 tháng",   "để âm nếu giá giảm",           "%"]
+];
+const SCR_R = [
+  ["deposit","Lãi tiết kiệm 12 tháng","mốc đối chiếu lợi suất", "%"]
+];
+const scHas = v => v !== null && v !== undefined && isFinite(v);
+const scNum = v => { const t = String(v).trim(); if(t === "") return null; const x = parseFloat(t); return isFinite(x) ? x : null; };
+
+function buildScrFields(host, defs){
+  const box = $(host); box.innerHTML = "";
+  defs.forEach(([k,label,hint,unit]) => {
+    const f = el("div","field");
+    const cur = scHas(S.scr[k]) ? S.scr[k] : "";
+    f.innerHTML = `<label for="sc-${k}">${label} <span class="hint">— ${hint}</span></label>
+      <div class="inp"><input id="sc-${k}" type="number" inputmode="decimal" step="any" placeholder="—" value="${cur}"><span class="unit">${unit}</span></div>`;
+    f.querySelector("input").addEventListener("input", e => {
+      S.scr[k] = scNum(e.target.value); save(); renderScreen();
+    });
+    box.appendChild(f);
+  });
+}
+
+function scoreScreen(){
+  const p = S.scr, V = [], M = [], flags = [];
+  const BANK = p.sector === "bank";
+  const add = (arr,name,shown,pt,max,note) => arr.push({name,shown,pt,max,note});
+  const skip = (arr,name) => arr.push({name,shown:"—",pt:null,max:0,note:"Chưa nhập — không chấm"});
+
+  /* ---------- LUỒNG 1: GIÁ TRỊ ---------- */
+  if(scHas(p.cap)){
+    let pt,n;
+    if(p.cap >= 10000){ pt=2; n="Đạt ngưỡng LargeCap"; }
+    else if(p.cap >= 5000){ pt=1; n="MidCap — biến động mạnh hơn LargeCap"; }
+    else { pt=0; n="Dưới ngưỡng LargeCap của cẩm nang"; }
+    add(V,"Vốn hoá", p.cap.toLocaleString("vi-VN")+" tỷ", pt,2,n);
+    if(p.cap < 10000) flags.push(["warn","Vốn hoá dưới 10.000 tỷ — không đạt tiêu chí LargeCap mà chính bạn đặt ra cho mục tiêu an toàn."]);
+  } else skip(V,"Vốn hoá");
+
+  if(scHas(p.pe)){
+    let pt,n;
+    if(p.pe <= 0){ pt=0; n="Không có lợi nhuận — P/E mất ý nghĩa"; }
+    else if(p.pe <= 12){ pt=2; n="Rẻ so với mặt bằng"; }
+    else if(p.pe <= 18){ pt=1; n="Quanh mặt bằng thị trường"; }
+    else { pt=0; n="Đắt — đang trả trước cho tăng trưởng chưa xảy ra"; }
+    add(V,"P/E", p.pe.toFixed(1)+" lần", pt,2,n);
+    if(p.pe <= 0) flags.push(["crit","P/E âm hoặc bằng 0 — công ty không có lợi nhuận trong 4 quý gần nhất. Mọi tỷ số định giá dựa trên lợi nhuận đều mất ý nghĩa."]);
+    if(p.pe > 30) flags.push(["warn","P/E trên 30 — cao so với mặt bằng VN-Index. Mức này chỉ hợp lý nếu bạn kiểm chứng được tăng trưởng lợi nhuận tương ứng, và bạn phải tự kiểm chứng."]);
+  } else skip(V,"P/E");
+
+  if(scHas(p.pb)){
+    let pt,n;
+    if(BANK){
+      if(p.pb >= 1 && p.pb <= 1.4){ pt=2; n="Vùng tối ưu của nhóm ngân hàng"; }
+      else if((p.pb >= 0.8 && p.pb < 1) || (p.pb > 1.4 && p.pb <= 2)){ pt=1; n="Ngoài vùng tối ưu nhưng chưa cực đoan"; }
+      else if(p.pb < 0.8){ pt=0; n="Dưới 0,8 lần sổ sách"; }
+      else { pt=0; n="Trên 2 lần sổ sách — rất cao với ngân hàng"; }
+      if(p.pb < 0.8) flags.push(["warn","P/B dưới 0,8 với một ngân hàng thường không phải tín hiệu rẻ mà là tín hiệu nghi ngờ: thị trường đang định giá sổ cho vay thấp hơn giá trị ghi sổ. Hãy đối chiếu với tỷ lệ nợ xấu và bao phủ nợ xấu ở trên trước khi kết luận."]);
+    } else {
+      if(p.pb < 0.7){ pt=1; n="Rẻ bất thường — cần kiểm tra chất lượng tài sản"; }
+      else if(p.pb <= 1.5){ pt=2; n="Hợp lý"; }
+      else if(p.pb <= 3){ pt=1; n="Cao hơn mặt bằng"; }
+      else { pt=0; n="Rất cao so với giá trị sổ sách"; }
+      if(p.pb < 0.7) flags.push(["warn","P/B dưới 0,7 — giá dưới 70% giá trị sổ sách. Hai khả năng: thị trường định giá sai, hoặc thị trường tin rằng tài sản trên sổ sách không còn đáng giá như ghi nhận. Bạn cần biết mình đang tin khả năng nào và vì sao."]);
+    }
+    add(V,"P/B", p.pb.toFixed(2)+" lần", pt,2,n);
+  } else skip(V,"P/B");
+
+  if(scHas(p.roe)){
+    let pt,n;
+    if(p.roe >= 15){ pt=2; n="Sinh lời trên vốn chủ tốt"; }
+    else if(p.roe >= 10){ pt=1; n="Trung bình"; }
+    else { pt=0; n="Thấp"; }
+    add(V,"ROE", p.roe.toFixed(1)+"%", pt,2,n);
+    if(p.roe > 40) flags.push(["warn","ROE trên 40% — hiếm khi bền vững. Thường đến từ đòn bẩy cao hoặc một khoản lợi nhuận bất thường không lặp lại. Kiểm tra ROE của 3–5 năm gần nhất trước khi tin con số này."]);
+    if(p.roe < 5) flags.push(["warn","ROE dưới 5% — công ty sinh lời trên vốn chủ kém hơn lãi tiết kiệm. Định giá rẻ trong trường hợp này thường là rẻ có lý do."]);
+  } else skip(V,"ROE");
+
+  if(BANK){
+    /* --- CAR thay cho Nợ/Vốn chủ --- */
+    if(scHas(p.car)){
+      let pt,n;
+      if(p.car > 12){ pt=2; n="Đệm vốn dày"; }
+      else if(p.car >= 9){ pt=1; n="Đệm vốn vừa đủ"; }
+      else { pt=0; n="Đệm vốn mỏng"; }
+      add(V,"CAR", p.car.toFixed(1)+"%", pt,2,n);
+      if(p.car < 9) flags.push(["crit","CAR dưới 9% — sát ngưỡng tối thiểu theo quy định (Thông tư 41/2016 đặt mức tối thiểu 8%; bạn nên kiểm tra lại quy định hiện hành). Đệm vốn mỏng nghĩa là ngân hàng ít dư địa hấp thụ nợ xấu và có thể phải tăng vốn, làm pha loãng cổ đông hiện hữu."]);
+    } else skip(V,"CAR");
+
+    /* --- Nợ xấu --- */
+    if(scHas(p.npl)){
+      let pt,n;
+      if(p.npl < 2){ pt=2; n="Nợ xấu thấp"; }
+      else if(p.npl <= 3){ pt=1; n="Nợ xấu ở mức trung bình"; }
+      else { pt=0; n="Nợ xấu cao"; }
+      add(V,"Tỷ lệ nợ xấu", p.npl.toFixed(2)+"%", pt,2,n);
+      if(p.npl > 3) flags.push(["crit","Tỷ lệ nợ xấu trên 3% — vượt ngưỡng vẫn được dùng làm mốc giám sát phổ biến ở Việt Nam. Với ngân hàng, đây là chỉ số rủi ro quan trọng hơn mọi tỷ số định giá ở trên."]);
+    } else skip(V,"Tỷ lệ nợ xấu");
+
+    /* --- Bao phủ nợ xấu --- */
+    if(scHas(p.pcr)){
+      let pt,n;
+      if(p.pcr > 100){ pt=2; n="Đã trích lập vượt nợ xấu"; }
+      else if(p.pcr >= 50){ pt=1; n="Trích lập một phần"; }
+      else { pt=0; n="Trích lập mỏng"; }
+      add(V,"Bao phủ nợ xấu", p.pcr.toFixed(0)+"%", pt,2,n);
+      if(p.pcr < 50) flags.push(["crit","Tỷ lệ bao phủ nợ xấu dưới 50% — ngân hàng mới trích lập cho chưa tới một nửa số nợ xấu đã ghi nhận. Phần chưa trích lập là lợi nhuận của hôm nay và có thể là khoản lỗ của ngày mai."]);
+      if(p.pcr >= 50 && p.pcr < 80) flags.push(["warn","Bao phủ nợ xấu dưới 80% — mỏng hơn mặt bằng nhóm ngân hàng thận trọng. Khi nợ xấu tăng, ngân hàng sẽ phải trích lập thêm và khoản đó trừ thẳng vào lợi nhuận."]);
+    } else skip(V,"Bao phủ nợ xấu");
+
+    /* --- CỜ ĐỎ XU HƯỚNG: nợ xấu tăng 2 quý liên tiếp --- */
+    if(scHas(p.npl) && scHas(p.npl1) && scHas(p.npl2)){
+      if(p.npl > p.npl1 && p.npl1 > p.npl2){
+        const d = (p.npl - p.npl2).toFixed(2);
+        flags.push(["crit","Nợ xấu tăng <strong>hai quý liên tiếp</strong>: "+p.npl2.toFixed(2)+"% → "+p.npl1.toFixed(2)+"% → "+p.npl.toFixed(2)+"% (tăng "+d+" điểm phần trăm). Vì tỷ lệ nợ xấu = nợ xấu ÷ dư nợ, tỷ lệ tăng nghĩa là <strong>nợ xấu đang tăng nhanh hơn tăng trưởng tín dụng</strong> — ngân hàng đang cho vay ra nhưng phần hỏng còn tăng nhanh hơn. Một quý xấu có thể là ngẫu nhiên; hai quý liên tiếp là xu hướng."]);
+      } else if(p.npl > p.npl1){
+        flags.push(["warn","Nợ xấu tăng so với quý trước ("+p.npl1.toFixed(2)+"% → "+p.npl.toFixed(2)+"%) nhưng chưa thành chuỗi hai quý. Theo dõi kỳ báo cáo tới."]);
+      }
+    }
+  } else {
+    if(scHas(p.de)){
+      let pt,n;
+      if(p.de <= 0.5){ pt=2; n="Đòn bẩy thấp"; }
+      else if(p.de <= 1){ pt=1; n="Đòn bẩy vừa phải"; }
+      else { pt=0; n="Đòn bẩy cao"; }
+      add(V,"Nợ vay / Vốn chủ", p.de.toFixed(2)+" lần", pt,2,n);
+      if(p.de > 2) flags.push(["crit","Nợ vay gấp hơn 2 lần vốn chủ — rất nhạy với lãi suất. Bài học đầu tư số 6 trong cẩm nang: đừng để mình vào tình huống buộc phải bán; điều đó đúng với công ty y như đúng với bạn."]);
+    } else skip(V,"Nợ vay / Vốn chủ");
+  }
+
+  /* ---------- LUỒNG 2: ĐỘNG LƯỢNG VÀ SỰ KIỆN ---------- */
+  if(scHas(p.froom)){
+    let pt,n;
+    if(p.froom > 20){ pt=2; n="Khối ngoại còn nhiều dư địa mua"; }
+    else if(p.froom >= 5){ pt=1; n="Còn dư địa vừa phải"; }
+    else { pt=0; n="Gần kín room — dư địa mua rất hẹp"; }
+    add(M,"Room ngoại còn lại", p.froom.toFixed(1)+"%", pt,2,n);
+    if(p.froom <= 0.5) flags.push(["crit","Room ngoại đã gần kín hoặc kín hoàn toàn. Nếu luận điểm của bạn dựa trên dòng tiền khối ngoại đổ vào sau nâng hạng, thì luận điểm đó không áp dụng được cho mã này — họ không mua thêm được."]);
+  } else skip(M,"Room ngoại còn lại");
+
+  if(scHas(p.chg12)){
+    let pt,n;
+    if(p.chg12 > 30){ pt=2; n="Đà tăng mạnh"; }
+    else if(p.chg12 >= 0){ pt=1; n="Đi ngang hoặc tăng nhẹ"; }
+    else { pt=0; n="Giá giảm trong 12 tháng"; }
+    add(M,"Đà giá 12 tháng", (p.chg12>0?"+":"")+p.chg12.toFixed(1)+"%", pt,2,n);
+    if(p.chg12 > 80) flags.push(["warn","Giá đã tăng hơn 80% trong 12 tháng. Nếu bạn định DCA vào đây thì bạn đang bắt đầu chuỗi mua ở gần đỉnh của một đợt tăng — đúng kịch bản mà chương XLIV của cẩm nang lấy làm ví dụ xấu nhất."]);
+  } else skip(M,"Đà giá 12 tháng");
+
+  add(M,"Ứng viên nâng hạng FTSE", p.ftse?"Có":"Không", p.ftse?2:0, 2,
+      p.ftse ? "Nằm trong nhóm được nhắc tới — thông tin này đã công khai" : "Không nằm trong nhóm được nhắc tới");
+  if(p.ftse) flags.push(["warn","Danh sách ứng viên nâng hạng đã được công bố rộng rãi trên báo chí tài chính. Thông tin ai cũng biết trước thường đã phản ánh vào giá — và hiệu ứng thêm vào chỉ số có xu hướng đảo chiều một phần sau khi các quỹ mua xong."]);
+  if(p.ftse && scHas(p.froom) && p.froom < 5) flags.push(["crit","Mâu thuẫn trực tiếp: bạn đang dựa vào luận điểm dòng tiền ngoại, nhưng room ngoại gần kín. Hai điều này không thể cùng đúng."]);
+
+  /* ---------- lợi suất lợi nhuận ---------- */
+  let ey = null;
+  if(scHas(p.pe) && p.pe > 0){
+    ey = 100 / p.pe;
+    if(scHas(p.deposit) && ey < p.deposit)
+      flags.push(["crit","Lợi suất lợi nhuận (1/PE = "+ey.toFixed(1)+"%) thấp hơn lãi tiết kiệm ("+p.deposit.toFixed(1)+"%). Bạn đang chấp nhận toàn bộ rủi ro cổ phiếu để lấy lợi suất thấp hơn gửi ngân hàng. Điều đó chỉ hợp lý nếu bạn tin lợi nhuận sẽ tăng mạnh — và đó là niềm tin bạn phải tự kiểm chứng."]);
+  }
+
+  const sum = a => a.filter(x=>x.pt!==null).reduce((t,x)=>t+x.pt,0);
+  const cap = a => a.filter(x=>x.pt!==null).reduce((t,x)=>t+x.max,0);
+  const vg = sum(V), vm = cap(V), mg = sum(M), mm = cap(M);
+  return {
+    V, M, flags, ey,
+    v:{got:vg, max:vm, pct: vm? vg/vm*100 : null},
+    m:{got:mg, max:mm, pct: mm? mg/mm*100 : null}
+  };
+}
+
+const SCR_VERDICT = {
+  hh: ["warn","Hai tín hiệu cùng cao — hãy nghi ngờ dữ liệu trước khi mừng",
+       "Định giá rẻ mà giá đã chạy mạnh là một tổ hợp hiếm, và lời giải thích thường gặp nhất không phải là bạn tìm được món hời. Nó là: P/E bạn nhập tính trên lợi nhuận 4 quý <em>đã qua</em>, trong khi giá hiện tại đã phản ánh kỳ vọng mới. Hãy kiểm tra hai điều — P/E có phải trailing không, và lợi nhuận quý gần nhất có khoản bất thường một lần nào không."],
+  lh: ["crit","MÂU THUẪN — bạn đang mua đà, không mua giá trị",
+       "Điểm giá trị thấp nhưng điểm động lượng cao. Đây là <strong>giao dịch theo sự kiện</strong>, không phải đầu tư giá trị. Không có gì sai khi làm vậy, miễn là bạn gọi đúng tên nó. Nhưng hai hệ quả: một là đừng biện minh cho nó bằng các tiêu chí giá trị, vì chúng đang nói ngược lại; hai là <strong>đừng dùng DCA cho nó</strong>. DCA mạnh nhờ tính cơ học và thời gian dài — còn giao dịch theo sự kiện thì có ngày hết hạn."],
+  hl: ["warn","Hình dạng của cơ hội giá trị — và cũng là hình dạng của bẫy giá trị",
+       "Rẻ mà chưa ai mua thì có hai khả năng: thị trường đang sai, hoặc thị trường biết điều bạn chưa biết. Chương LIII của cẩm nang nói thẳng rằng từ bên trong bạn rất khó phân biệt hai khả năng đó — người thiếu thông tin nhất thường là người tự tin nhất. Trước khi kết luận là cơ hội, hãy viết ra <em>vì sao</em> thị trường lại định giá thấp thế này. Nếu không viết được, bạn chưa hiểu rõ nó."],
+  ll: ["ink3","Không có tín hiệu nào đủ mạnh",
+       "Cả hai điểm đều thấp. Không có gì để phân tích thêm — và đó cũng là một kết luận hợp lệ. Phần lớn thời gian, câu trả lời đúng là không làm gì cả."]
+};
+
+function applySector(){
+  const bank = S.scr.sector === "bank";
+  for(const b of $("#sc-sector").children) b.setAttribute("aria-pressed", String(b.dataset.sec === S.scr.sector));
+  $("#sc-secnote").innerHTML = SEC_NOTE[S.scr.sector];
+  buildScrFields("#scf-sec", SCR_SEC[S.scr.sector]);
+  $("#scf-trendwrap").hidden = !bank;
+  if(bank) buildScrFields("#scf-trend", SCR_TREND);
+}
+
+function renderScreen(){
+  const r = scoreScreen(), p = S.scr;
+
+  /* hai ô điểm — luôn tách riêng, không có ô tổng */
+  const box = $("#sctiles"); box.innerHTML = "";
+  const mk = (title, o, color, sub) => {
+    const t = el("div","tile");
+    const pct = o.pct === null ? 0 : o.pct;
+    t.innerHTML = `<span class="stripe" style="background:${color}"></span>
+      <div class="k">${title}</div>
+      <div class="v">${o.max ? o.got + " / " + o.max : "—"}</div>
+      <div class="s">${sub}</div>
+      <div class="meter"><i style="width:${pct.toFixed(0)}%;background:${color}"></i></div>`;
+    box.appendChild(t);
+  };
+  mk("Tín hiệu giá trị", r.v, "var(--good)",
+     S.scr.sector === "bank" ? "Vốn hoá · P/E · P/B · ROE · CAR · nợ xấu · bao phủ"
+                             : "Vốn hoá · P/E · P/B · ROE · Nợ trên vốn chủ");
+  mk("Tín hiệu động lượng và sự kiện", r.m, "var(--brass)", "Room ngoại · đà giá · ứng viên FTSE");
+  const t3 = el("div","tile");
+  t3.innerHTML = `<span class="stripe" style="background:var(--ink3)"></span>
+    <div class="k">Lợi suất lợi nhuận</div>
+    <div class="v">${r.ey === null ? "—" : r.ey.toFixed(1) + "%"}</div>
+    <div class="s">1 / PE — so với lãi tiết kiệm ${scHas(p.deposit) ? p.deposit.toFixed(1)+"%" : "chưa nhập"}</div>`;
+  box.appendChild(t3);
+
+  /* phán đoán mâu thuẫn */
+  const vd = $("#scverdict");
+  if(r.v.pct === null || r.m.pct === null){
+    vd.innerHTML = `<div class="callout">Nhập thêm số liệu ở cả hai nhóm để công cụ so được hai tín hiệu với nhau.</div>`;
+  } else {
+    const hi = x => x >= 60;
+    const key = (hi(r.v.pct)?"h":"l") + (hi(r.m.pct)?"h":"l");
+    const [tone, head, body] = SCR_VERDICT[key];
+    const c = tone === "ink3" ? "var(--ink3)" : "var(--"+tone+")";
+    vd.innerHTML = `<div class="card pad" style="border-left:3px solid ${c}">
+      <div class="k" style="font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:${c};font-weight:600">Đối chiếu hai luồng</div>
+      <h3 style="font-size:19px;margin:6px 0 8px;letter-spacing:-.02em">${head}</h3>
+      <p style="font-size:14.5px;color:var(--ink2);line-height:1.62;font-family:'Source Serif 4',serif">${body}</p>
+      <div class="note">Giá trị ${r.v.pct.toFixed(0)}% · Động lượng ${r.m.pct.toFixed(0)}%. Hai con số này cố ý không được cộng lại thành một điểm duy nhất — một điểm tổng sẽ che mất chính điều bạn cần thấy.</div>
+    </div>`;
+  }
+
+  /* bảng chi tiết */
+  const tb = $("#sctable").querySelector("tbody");
+  const rows = [["LUỒNG GIÁ TRỊ" + (S.scr.sector === "bank" ? " — CHẾ ĐỘ NGÂN HÀNG" : ""), r.V],
+                ["LUỒNG ĐỘNG LƯỢNG VÀ SỰ KIỆN", r.M]];
+  tb.innerHTML = rows.map(([lbl,items]) =>
+    `<tr><td colspan="4" style="padding-top:14px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);font-weight:600;border-bottom:1.5px solid var(--line-2)">${lbl}</td></tr>` +
+    items.map(x => `<tr><td>${x.name}</td><td class="n">${x.shown}</td><td class="n">${x.pt===null?"—":x.pt+"/"+x.max}</td><td style="text-align:left;color:var(--ink2)">${x.note}</td></tr>`).join("")
+  ).join("");
+
+  /* cờ đỏ */
+  const fb = $("#scflags");
+  if(!r.flags.length){
+    fb.innerHTML = `<div class="card pad"><h3 style="font-size:17px;margin-bottom:6px">Cảnh báo</h3><p class="empty">Chưa có cảnh báo nào từ những con số đã nhập. Điều đó không có nghĩa là không có rủi ro — chỉ có nghĩa là công cụ này không thấy rủi ro nào trong phạm vi nó kiểm tra được.</p></div>`;
+  } else {
+    fb.innerHTML = `<div class="card pad"><h3 style="font-size:17px;margin-bottom:10px">Cảnh báo (${r.flags.length})</h3>` +
+      r.flags.map(([lvl,txt]) => `<div style="display:flex;gap:11px;padding:11px 0;border-top:1px solid var(--line)">
+        <span style="flex:0 0 3px;background:var(--${lvl});border-radius:2px"></span>
+        <span style="font-size:13.5px;color:var(--ink2);line-height:1.6">${txt}</span></div>`).join("") + `</div>`;
+  }
+}
+
 function renderAll(){
   buildFields("#f1", FIELDS_1);
   buildFields("#f2", FIELDS_2);
   showCpane();
+  buildScrFields("#scf-v", SCR_V);
+  buildScrFields("#scf-m", SCR_M);
+  buildScrFields("#scf-r", SCR_R);
+  applySector();
+  $("#sc-ticker").value = S.scr.ticker || "";
+  $("#sc-ftse").checked = !!S.scr.ftse;
+  renderScreen();
   renderMap(); renderKB(); renderLevels();
   renderSrcs(); renderLessons(); renderIkigai(); buildDcaFields(); buildNhaFields();
   showTpane(); renderTuSoi();
@@ -3809,6 +4160,12 @@ function renderAll(){
   renderNumbers(); drawChart();
 }
 $("#i-cow").addEventListener("input", renderCows);
+$("#sc-ticker").addEventListener("input", e => { S.scr.ticker = e.target.value.trim().toUpperCase().slice(0,12); save(); });
+$("#sc-ftse").addEventListener("change", e => { S.scr.ftse = e.target.checked; save(); renderScreen(); });
+$("#sc-sector").addEventListener("click", e => {
+  const b = e.target.closest("button[data-sec]"); if(!b || b.dataset.sec === S.scr.sector) return;
+  S.scr.sector = b.dataset.sec; save(); applySector(); renderScreen();
+});
 $("#tudo-so").addEventListener("input", e => { S.tuDo.so = num(e.target.value); save(); renderTuDo(); });
 $("#tudo-ghi").addEventListener("input", e => { S.tuDo.ghi = e.target.value; save(); });
 $("#tiec-box").addEventListener("input", e => { S.tiec = e.target.value; save(); });

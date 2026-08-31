@@ -3,69 +3,75 @@
 
 ---
 
+
+---
+
+## ⚠ ĐỌC TRƯỚC — SỬA FILE NÀO
+
+**`app/index.html` là NGUỒN DUY NHẤT.** Mọi thay đổi code phải vào file đó.
+
+`La-Ban-Tu-Do-Tai-Chinh.html` ở thư mục gốc là **file sinh ra**, `node build.mjs` ghi đè nó
+mỗi lần chạy. Sửa vào đó thì công sức biến mất lặng lẽ ở lần build kế tiếp — **đã xảy ra
+thật một lần** khi thêm tab Bộ lọc: toàn bộ thay đổi đi vào file sinh ra, trong khi bản
+deploy lên GitHub Pages đọc từ `app/index.html` nên không hề nhận được gì.
+
+**Quy trình chuẩn mỗi lần sửa code:**
+
+```
+1. sửa app/index.html
+2. nếu đổi giao diện/tính năng → bump PHIEN_BAN trong app/sw.js
+   (không bump thì điện thoại đã cài PWA vẫn phục vụ bản cache cũ)
+3. node build.mjs     # kiểm tra + sinh lại bản một-file
+4. node test.mjs      # 39 phép kiểm công thức
+5. git add -A && git commit && git push
+```
+
+**Dấu hiệu bạn đang sửa nhầm file:** `git status` hiện `M La-Ban-Tu-Do-Tai-Chinh.html`
+mà **không** hiện `M app/index.html`.
+
 ## 1. TỔNG QUAN
 
-Ứng dụng web **một file HTML tự chứa**, không framework, không npm, không backend —
-cộng thêm lớp vỏ PWA để cài được lên Android. Toàn bộ HTML + CSS + JS nằm trong
-`app/index.html` (~403 KB: **196 thẻ KB / 51 nhóm**).
+Ứng dụng web **một file duy nhất**, không build step, không dependency, không backend.
+Toàn bộ HTML + CSS + JS nằm trong `app.html` (~214 KB: **172 thẻ KB / 43 nhóm**).
 
 | Mục tiêu | Cách hiện thực |
 |---|---|
-| Học và tra cứu kiến thức | Tab **Cẩm nang** — 196 thẻ, 51 nhóm, tìm kiếm tức thì |
-| Biết mình đang ở đâu | Tab **Bản đồ** — 12 bước, 4 giai đoạn, ba nấc cuối tính tự động |
-| Biết con số phải đạt | Tab **Con số của tôi** — 5 máy tính trong 5 pane phụ |
-| Theo dõi & tự soi | Tab **Theo dõi** — 4 pane phụ: nhật ký · bảy nguồn · tự chấm · suy ngẫm |
-| Dữ liệu riêng tư | `localStorage`, không gửi đi đâu; xuất/nhập JSON bằng tay |
-| Cài lên điện thoại | PWA: manifest + service worker, chạy được khi mất mạng |
-
-**Năm máy tính trong tab Con số** (thanh chọn phụ `#cnav`): Ba cột mốc · Ngân sách 50/30/20 ·
-Bạn đang là ai · Máy tính DCA · Mua hay thuê nhà.
-
-**Bốn pane trong tab Theo dõi** (thanh chọn phụ `#tnav`): Nhật ký · Bảy nguồn thu · Tự chấm · Suy ngẫm.
-
-> Vẫn giữ đúng **5 tab chính** như thiết kế gốc — mọi thứ thêm vào đều nằm trong pane phụ,
-> không đẻ thêm tab.
+| Học và tra cứu kiến thức | Tab **Cẩm nang** — 54 thẻ, 12 nhóm, tìm kiếm tức thì |
+| Biết mình đang ở đâu | Tab **Bản đồ** — 12 bước, checklist, vòng tiến độ |
+| Biết con số phải đạt | Tab **Con số của tôi** — 3 cột mốc theo quy tắc 4% |
+| Theo dõi tiến triển | Tab **Theo dõi** — nhật ký tài sản ròng + biểu đồ |
+| Dữ liệu riêng tư | `localStorage`, không gửi đi đâu; có xuất/nhập JSON |
 
 ---
 
 ## 2. FILE & THƯ MỤC
 
 ```
-Hành trình tự do tài chính/
-├── app/                                  ← BẢN PWA, đây là thứ đưa lên hosting
-│   ├── index.html                        ← NGUỒN DUY NHẤT, sửa ở đây
-│   ├── manifest.webmanifest
-│   ├── sw.js                             ← service worker, NHỚ TĂNG PHIEN_BAN mỗi lần sửa
-│   ├── robots.txt                        ← chặn mọi bộ thu thập
-│   ├── .nojekyll                         ← GitHub Pages không chạy Jekyll
-│   └── icons/  icon-192 · icon-512 · icon-maskable-512 · favicon-32
-├── La-Ban-Tu-Do-Tai-Chinh.html           ← SINH TỰ ĐỘNG từ app/index.html, đừng sửa tay
-├── build.mjs                             ← kiểm tra + sinh bản một file
-├── test.mjs                              ← 39 test công thức tài chính
-├── test-pwa.mjs                          ← 21 test PWA, gồm cả tắt mạng
-├── shot.mjs                              ← kiểm giao diện + chụp ảnh (thay Playwright)
-├── serve.mjs                             ← máy chủ tĩnh để thử PWA ở localhost
-├── tao-icon.py                           ← sinh lại icon PNG từ ký hiệu la bàn
-├── muathue.py + verify.py                ← mô hình tham chiếu MUA vs THUÊ (Python, 9/9 đạt)
-├── Cam-nang-Hanh-trinh-Tu-do-Tai-chinh.md ← 56 chương kiến thức nguồn
-├── APP-GUIDE.md                          ← tài liệu này
-├── HUONG-DAN-CAI-DAT.md                  ← hướng dẫn deploy + cài Android, viết cho người dùng
-├── anh-chup/                             ← ảnh chụp do shot.mjs sinh ra
-├── Hieutv/                               ← tài liệu gốc (PDF, xlsx)
-└── _luu-tru/                             ← nhánh cũ đã bỏ, giữ để tham chiếu
+/root/htdtc/
+├── app.html                              ← NGUỒN CHÍNH (nội dung artifact, không có <html>/<head>/<body>)
+├── standalone.html                       ← sinh ra tự động: app.html + khung doctype đầy đủ
+├── La-Ban-Tu-Do-Tai-Chinh.html           ← bản giao cho người dùng (copy của standalone)
+├── Cam-nang-Hanh-trinh-Tu-do-Tai-chinh.md ← cẩm nang markdown 13 chương
+├── shot.py / shot2.py                    ← script Playwright chụp màn hình kiểm thử
+├── extract.py                            ← parse tool-result JSON lấy transcript
+├── docs/
+│   ├── METHOD-thu-thap-phu-de.md         ← quy trình lấy phụ đề
+│   └── APP-GUIDE.md                      ← tài liệu này
+└── tx/                                   ← transcript thô (nếu giữ)
 ```
 
-> ⚠️ **Chỉ sửa `app/index.html`.** File ở gốc bị `build.mjs` ghi đè mỗi lần chạy.
-> `_luu-tru/app.html` là nhánh cũ hoàn toàn khác (6 tab, khoá `htdtc.v2`, chỉ 164 thẻ) —
-> **đừng lấy nhầm**.
+> ⚠️ **Quan trọng:** `app.html` là *nội dung* artifact — **không** chứa `<!doctype>`, `<html>`,
+> `<head>`, `<body>`. Công cụ Artifact tự bọc khung khi xuất bản. Bản `standalone.html`
+> mới có khung đầy đủ, dùng để mở offline.
 
-**Vòng làm việc mỗi lần sửa:**
+**Lệnh sinh standalone:**
 
-```bash
-node test.mjs        # công thức tài chính còn đúng không
-node build.mjs       # kiểm cú pháp + PWA hợp lệ, rồi sinh bản một file
-node shot.mjs        # duyệt hết tab/pane ở 1180px và 360px, chụp ảnh
-node test-pwa.mjs    # manifest, service worker, tắt mạng vẫn chạy
+```python
+c = open('app.html', encoding='utf-8').read()
+open('standalone.html','w',encoding='utf-8').write(
+  '<!doctype html>\n<html lang="vi"><head><meta charset="utf-8">\n'
+  '<meta name="viewport" content="width=device-width,initial-scale=1">\n'
+  '<style>*{margin:0;padding:0}</style>\n</head><body>\n' + c + '\n</body></html>')
 ```
 
 ---
@@ -140,48 +146,16 @@ const KEY = "htdtc.v1";
     rate: 6,       // lợi nhuận thực        (%/năm)
     swr: 4         // tỷ lệ rút an toàn     (%/năm)
   },
-  log: [ { d:"2026-08", nw:520, pi:3.5 } ],  // nhật ký theo tháng
-
-  // ----- thêm ở bản này, khoá localStorage GIỮ NGUYÊN htdtc.v1 -----
-  srcs:    { rental:{on:true, amt:7}, … },   // bảy nguồn thu nhập
-  lessons: { "1":true, "3":true },           // mười bài học đầu tư
-  ikigai:  { a:"", b:"", c:"", d:"" },       // bốn ô Ikigai
-  dca:     { pmt:10, nam:20, rate:10 },      // máy tính DCA
-  nha:     { loai:"cc", gia:3000, von:900, nam:25, kyHan:25, thueThang:10,
-             soLanChuyen:1, lai:11, tangGia:5, phiThang:1.2, lamPhat:4,
-             loiSuat:10, coPhiBaoTri:true,
-             phi:{truocBa:0.5, congChung:2.2, phiHoSo:5,
-                  phiBaoTri:2, thueTNCN:2, moiGioi:1.5} },
-  principles:{ "1":true },                   // chín nguyên tắc chi tiêu
-  mistakes:{ kienthuc:true },                // bốn sai lầm (tick = ĐÃ TRÁNH được)
-  env:     { banbe:"thuan", noio:"can" },    // tự soi môi trường
-  baThu:   { a:"", b:"", c:"" },             // ba thứ quan trọng nhất
-  values:  { q1:"", q2:"", q3:"", q4:"" },   // bốn câu hỏi tự soi
-  rebuild: { kienThuc:5, kinhNghiem:5, quanHe:5, uyTin:5, nam:5 },
-  pains:   [ {id, t:"…", d:"2026-08-29"} ],  // danh sách vấn đề
-  tuoi:    0,                                // timeline 18–35
-  tuDo:    { so:"", ghi:"" },                // con số nào đủ để BẠN tự do
-  tiec:    "",                               // nếu 80 tuổi nhìn lại
-  ui:      { cpane:"moc", tpane:"log", saoLuu:"2026-08-29" }
+  log: [ { d:"2026-08", nw:520, pi:3.5 } ]  // nhật ký theo tháng
 }
 ```
-
-**Ô nhập mới trong `inp`:** `debtPay` — tổng tiền trả nợ mỗi tháng, dùng cho cảnh báo
-tỷ lệ trả nợ / thu nhập vượt 40%.
 
 > **Đơn vị: TRIỆU đồng** cho mọi giá trị tiền. `money()` tự đổi sang "tỷ" khi ≥ 1000.
 > Nếu thêm trường mới, luôn giữ đơn vị này để không phải đổi công thức.
 
-**Vì sao vẫn là `htdtc.v1`:** không cần migrate. Hàm `merge()` phủ `DEF` lên dữ liệu đọc vào
-và ép kiểu từng nhánh, nên file sao lưu cũ (chỉ có `steps` / `inp` / `log`) vẫn nhập được bình thường —
-các nhánh thiếu lấy giá trị của `DEF`.
-
-**Thêm trường mới:** thêm vào `DEF`, rồi thêm đúng một dòng vào `merge()`:
-- object phẳng cần giữ mặc định → `ten:{...b.ten, ...obj(p.ten)}`
-- object dạng từ điển tự do → `ten:obj(p.ten)`
-- mảng → `ten:Array.isArray(p.ten) ? p.ten : []`
-
-Chỉ đổi `KEY` khi **đổi ý nghĩa** của một trường đã tồn tại — lúc đó mới phải viết migrate thật.
+**Nâng cấp schema:** khi đổi cấu trúc, đổi `KEY` thành `htdtc.v2` và viết hàm migrate
+từ `v1`, đừng phá dữ liệu người dùng. Hàm `load()` đã merge với `DEF` nên thêm trường mới
+vào `DEF.inp` là tự động an toàn.
 
 ---
 
@@ -195,9 +169,8 @@ Toàn bộ JS nằm trong một IIFE `(() => { ... })()` ở cuối file, chia k
 | `STEPS` | 12 bước: `{n, t, d, acts[], note}` | thêm/sửa việc cần làm, ghi chú |
 | `LEVELS` | 4 mức độ tiết kiệm | — |
 | `KB` | mảng thẻ cẩm nang | **thêm kiến thức mới ở đây** |
-| `KEY / DEF / merge / load / save` | state + persistence | thêm trường dữ liệu |
-| `$ / el / num / money / dec / yrs / niceMax` | tiện ích định dạng | — |
-| `uid / esc / todayISO / toast` | tiện ích cho các sổ ghi | — |
+| `KEY / DEF / load / save` | state + persistence | thêm trường dữ liệu |
+| `$ / el / num / money / yrs / niceMax` | tiện ích | — |
 | `monthsTo / calc` | **toàn bộ công thức tài chính** | đổi mô hình tính |
 | `PANELS` + listener `#tabs` | chuyển tab | thêm tab mới |
 | `renderMap / stepEl / renderSummary` | tab Bản đồ | |
@@ -205,35 +178,9 @@ Toàn bộ JS nằm trong một IIFE `(() => { ... })()` ở cuối file, chia k
 | `tile / renderCalc` | tab Con số | thêm chỉ số |
 | `renderTrack / drawChart` | tab Theo dõi + biểu đồ SVG | |
 | `renderLevels / renderCows` | 4 mức tiết kiệm + máy tính "nuôi bò" | |
-| **`CPANES` + listener `#cnav`** | 5 pane phụ tab Con số | thêm máy tính mới |
-| **`TPANES` + listener `#tnav`** | 4 pane phụ tab Theo dõi | thêm mục theo dõi mới |
-| **`budget503020 / renderBudget`** | ngân sách 50/30/20 + quỹ 12 tháng | |
-| **`phanLoaiSanNong / renderSanNong`** | thợ săn ↔ nông dân, phép thử 3 tháng, bội số nghỉ việc | |
-| **`renderRungs`** | ba nấc cuối tính tự động trong tab Bản đồ | |
-| **`dca / DCA_FIELDS / renderDCA / drawDCA`** | máy tính DCA + biểu đồ hai đường | |
-| **`PHI_VN / pmt / soSanhMuaThue / diemHoaVon`** | **toàn bộ mô hình mua vs thuê** | port từ `muathue.py` |
-| **`NHA_LOAI / NHA_F1 / NHA_F2 / NHA_PHI / renderNha`** | giao diện mua vs thuê | thêm ô nhập |
-| **`SRC7 / srcStats / renderSrcs`** | bảy nguồn thu nhập | |
-| **`LESSONS / LES_GROUPS / renderLessons`** | mười bài học đầu tư | |
-| **`IK / IK_CROSS / renderIkigai`** | sơ đồ Ikigai | |
-| **`PRINCIPLES / renderPrinciples`** | chín nguyên tắc chi tiêu | |
-| **`MISTAKES / renderMistakes`** | bốn sai lầm đầu tư | |
-| **`ENV / ENV_MUC / renderEnv`** | tự soi môi trường | |
-| **`textGrid`** | dựng lưới ô nhập chữ tự do | dùng lại cho mọi biểu mẫu chữ |
-| **`RB_FIELDS / renderRebuild`** | chỉ số gây dựng lại | |
-| **`DOI_GD / renderAge`** | timeline 18–35 | |
-| **`renderPains`** | danh sách vấn đề | |
-| **`renderTuDo`** | con số nào đủ để BẠN tự do | |
-| **`ghiNhoSaoLuu / renderNhacSaoLuu`** | nhắc sao lưu định kỳ | |
 | `renderKB` | tìm kiếm + lọc cẩm nang | |
 | `exp / imp / clr` | xuất nhập dữ liệu | |
-| **`renderNumbers`** | mọi thứ phụ thuộc ô nhập số — gọi lại sau mỗi lần gõ | **thêm render phụ thuộc số vào đây** |
-| **`renderTuSoi`** | gom các render của pane Tự chấm và Suy ngẫm | |
 | `renderAll` | gọi tất cả — **thêm hàm render mới vào đây** | |
-
-> `buildFields(host, defs)` giờ dùng chung cho nhiều nhóm ô nhập. Ô nhập của DCA và Mua/Thuê
-> có bộ dựng riêng (`buildDcaFields`, `buildNhaFields`) vì chúng ghi vào `S.dca` / `S.nha`
-> chứ không vào `S.inp`.
 
 ---
 
@@ -272,78 +219,8 @@ function monthsTo(target, principal, monthly, annualRate) {
 `cần cho mức tối thiểu = ceil(min/per)`, `cần cho mức tiêu chuẩn = ceil(std/per)`,
 `nuôi dư an toàn = ceil(needStd × 1.5)`, `đang có = passive / per`.
 
-### Máy tính DCA — `dca(pmt, nam, ratePct, swrPct)`
-
-Niên kim cuối kỳ với lãi tháng tương đương:
-
-```js
-const i  = Math.pow(1 + r, 1/12) - 1;      // r = tỷ suất/năm dạng thập phân
-const FV = i === 0 ? pmt*n : pmt*(Math.pow(1+i, n) - 1)/i;   // n = số tháng
-```
-
-Bộ số kiểm chứng (đã có trong `test.mjs`): **10 tr/th × 20 năm × 10%/năm** → chỉ tích luỹ
-**2.400 triệu**, có đầu tư **7.182,6 triệu**, quy tắc 4% cho **23,9 triệu/tháng**.
-Thêm 10 năm nữa → **20.628 triệu**.
-
-### Mua vs thuê nhà — `soSanhMuaThue` / `diemHoaVon`
-
-Port nguyên logic từ `muathue.py`. **Nguyên tắc so sánh, đây là chỗ dễ làm sai nhất:**
-hai bên bỏ ra **cùng một ngân sách mỗi tháng**; ai chi ít hơn thì phần dư vào danh mục đầu tư
-và ăn lãi kép. Cả hai khởi đầu với cùng số tiền mặt. Chạy vòng lặp **theo từng tháng** vì tiền
-thuê tăng theo lạm phát trong khi khoản trả nợ đứng yên.
-
-```js
-const nganSach = Math.max(rT, chiMuaT);        // bên nào chi nhiều hơn thì đó là ngân sách chung
-dmThue = dmThue*(1 + iDt) + (nganSach - rT);
-dmMua  = dmMua *(1 + iDt) + (nganSach - chiMuaT);
-```
-
-> ❌ **Đừng làm theo bảng tính gốc của hieu.tv** — nó lấy giá trị cuối kỳ trừ tổng chi phí danh nghĩa,
-> tức cộng dồn tiền thuê và tiền trả nợ theo giá trị danh nghĩa nhưng lại tính lãi kép cho vốn đầu tư.
-> Hai bên bị đối xử khác nhau và sai số lên tới hàng chục tỷ.
-
-**Hai quy ước lãi suất khác nhau, cố ý:**
-- `pmt()` dùng lãi **danh nghĩa chia 12** (`r/12`) — đúng cách ngân hàng báo lãi vay.
-- Danh mục đầu tư dùng lãi **tháng tương đương** (`(1+r)^(1/12) − 1`) — đúng cách lãi kép hoạt động.
-
-Điểm hoà vốn tìm bằng **dò nhị phân 80 vòng** trên khoảng `[-5%, +40%]` của mức tăng giá nhà.
-
-**Bộ số kiểm chứng** (nhà 3.000, vốn 900, 25 năm, lãi vay 11%, lạm phát 4%, đầu tư 10%,
-thuê 10 tr/th, chung cư +5%/năm, có phí bảo trì, ở yên một chỗ):
-
-| | |
-|---|---|
-| Trả nợ mỗi tháng | 20,6 triệu |
-| Chi phí lúc mua | 82,2 triệu |
-| Giá nhà sau 25 năm | 10,16 tỷ |
-| Net worth khi MUA | 9,85 tỷ |
-| Net worth khi THUÊ | 21,05 tỷ |
-| Điểm hoà vốn | 8,2%/năm |
-
-Bảng độ nhạy (lãi vay × lợi suất đầu tư → điểm hoà vốn) cũng được kiểm từng ô trong `test.mjs`.
-
-**Hai phép kiểm chứng bắt buộc — chúng bắt gần như mọi lỗi port:**
-1. Bỏ hết thuế phí, đặt mức tăng giá đúng bằng lợi suất đầu tư, không vay, không thuê →
-   hai bên phải bằng nhau đến từng số lẻ.
-2. Đặt mức tăng giá = điểm hoà vốn vừa tìm được → chênh lệch hai bên ≈ 0.
-
-### Ngân sách 50/30/20 — `budget503020(income, coDinhThuc)`
-
-Bản của hieu.tv, **không phải** bản 50/30/20 phổ biến của Mỹ: 50% chi phí cố định · 30% đầu tư ·
-20% hưởng thụ · quỹ dự phòng = **12 tháng** chi phí cố định thực tế. Cờ `vuot` bật khi chi phí
-cố định thật vượt 50% thu nhập.
-
-### Thợ săn ↔ nông dân — `phanLoaiSanNong(cover)`
-
-Theo `cover = thu nhập thụ động ÷ chi tiêu tiêu chuẩn`:
-`< 0,2` thợ săn · `0,2–1` nông dân ngắn ngày · `≥ 1` nông dân dài ngày.
-
-**Cạm bẫy đã sửa:**
-- `yrs()` phải làm tròn **tổng số tháng trước** rồi mới chia, nếu không sẽ ra "19 năm 12 th".
-- Số lẻ hiển thị phải qua `dec()` (dấu phẩy kiểu Việt) — **trừ** giá trị đưa vào `style="width:…%"`,
-  chỗ đó bắt buộc dấu chấm, nếu không thanh meter câm.
-- `.acts li` là `display:flex`, nên `<strong>`/`<em>` bên trong `<li>` sẽ thành flex item riêng và
-  vỡ bố cục. Nội dung có thẻ inline phải bọc trong một `<span>`.
+**Cạm bẫy đã sửa:** `yrs()` phải làm tròn **tổng số tháng trước** rồi mới chia,
+nếu không sẽ ra "19 năm 12 th".
 
 ---
 
@@ -387,142 +264,79 @@ Nhóm mới tự động sinh chip lọc. Tìm kiếm quét cả `t`, `g`, `b`, 
 Thêm vào `FIELDS_1` hoặc `FIELDS_2`: `["khoá", "Nhãn", "gợi ý ngắn", "đơn vị"]`,
 và thêm giá trị mặc định vào `DEF.inp`. `buildFields()` lo phần còn lại.
 
-### Thêm một máy tính vào tab Con số
+### Thêm một tab
 
-1. Thêm `<button data-c="ten">` vào `nav#cnav`
-2. Thêm `<div class="cpane" id="c-ten">` (không có class `on` — chỉ pane mặc định mới có)
-3. Thêm `ten:"#c-ten"` vào object `CPANES`
-4. Viết `renderTen()`, gọi trong `renderNumbers()` nếu nó phụ thuộc ô nhập số
-
-### Thêm một mục vào tab Theo dõi
-
-Y hệt như trên nhưng với `#tnav`, `.tpane`, `TPANES`, và gọi trong `renderTuSoi()`.
-
-### Thêm một checklist tự chấm
-
-Mẫu có sẵn ở `PRINCIPLES` + `renderPrinciples()`: một mảng `{n, t, d}`, dựng bằng
-`.chklist` / `.chk.plain`, trạng thái lưu ở `S.<ten>[key] = true`. Nhớ bọc ô tick trong
-`<label class="box">` để có vùng bấm 44×44.
-
-### Thêm một biểu mẫu chữ tự do
-
-Dùng `textGrid("#id", DEFS, S.kho)` với `DEFS = [{k, t, q}]`. Nó lo cả việc đọc/ghi
-`localStorage`. Mẫu: `BA_THU`, `VAL_Q`, `IK`.
-
-### Thêm một tab chính
-
-1. Thêm `<button data-t="ten"><span class="full">Tên dài</span><span class="short">Ngắn</span></button>`
-   vào `nav.tabs` — **phải có cả hai span**, thanh tab dưới đáy trên điện thoại dùng nhãn ngắn
+1. Thêm `<button data-t="ten">` vào `nav.tabs`
 2. Thêm `<section class="panel" id="p-ten" hidden>`
 3. Thêm `ten: "#p-ten"` vào object `PANELS`
-4. Sửa `grid-template-columns:repeat(5,1fr)` của `nav.tabs` trong media query 640px
-5. Viết `renderTen()` và gọi trong `renderAll()`
+4. Viết `renderTen()` và gọi trong `renderAll()`
 
 ---
 
-## 9. KIỂM THỬ
+## 9. VÒNG LẶP KIỂM THỬ
 
-Playwright **không** cài trên máy này. Thay vào đó `shot.mjs` và `test-pwa.mjs` lái thẳng
-Chrome đã có sẵn qua **DevTools Protocol**, dùng `WebSocket` và `fetch` có sẵn trong Node 22+.
-Không dependency, không npm.
+Chromium có sẵn trong container. **Luôn render và nhìn trước khi xuất bản.**
 
-### `node test.mjs` — 39 test công thức
+```python
+from playwright.sync_api import sync_playwright
+import pathlib
+url = "file://" + str(pathlib.Path("standalone.html").resolve())
+with sync_playwright() as p:
+    b  = p.chromium.launch(executable_path="/opt/pw-browsers/chromium-1194/chrome-linux/chrome")
+    pg = b.new_page(viewport={"width":1180,"height":1000})
+    pg.goto(url); pg.wait_for_timeout(900)
+    # bơm dữ liệu mẫu qua input event rồi reload
+    ...
+    pg.screenshot(path="s_map.png")
+    print("overflow:", pg.evaluate(
+      "document.documentElement.scrollWidth > document.documentElement.clientWidth"))
+    b.close()
+```
 
-Trích **thẳng thân hàm** ra khỏi `app/index.html` bằng cách đếm ngoặc nhọn rồi chạy trong
-`node:vm`. Không chép lại công thức, nên test luôn kiểm đúng bản đang chạy.
-
-- `grab(ten)` cắt `function ten(...)`, `grabConst(TEN)` cắt `const TEN = {...}`
-- Thêm hàm mới cần test → thêm tên vào mảng `NAMES`; hàm phải khai báo dạng `function ten(...)`
-- Hàm chưa tồn tại thì test tự **bỏ qua** thay vì hỏng — viết test trước, code sau vẫn chạy được
-
-### `node build.mjs` — kiểm tính toàn vẹn rồi sinh bản một file
-
-Kiểm cú pháp JS · đủ file PWA · manifest hợp lệ · có icon maskable · service worker có
-chuỗi phiên bản và có dọn cache cũ · mọi file trong `SHELL` tồn tại thật. Hỏng bất cứ mục nào
-thì **không sinh file**.
-
-### `node shot.mjs` — giao diện, hai kích thước màn hình
-
-Ở **1180px** và **360px**: duyệt hết 5 tab và toàn bộ pane phụ, kiểm
-`scrollWidth > clientWidth` ở từng chỗ, đếm thẻ cẩm nang, thử tìm kiếm và lọc nhóm, bắt
-`Runtime.exceptionThrown`, kiểm `localStorage` còn dữ liệu sau reload, in ra bảng số liệu để
-đối chiếu bằng mắt, rồi chụp ảnh sáng/tối vào `anh-chup/`.
-
-- `shot()` chụp **toàn trang**, `shotVP()` chụp **chỉ khung nhìn** — cần cái sau mới thấy
-  thanh tab cố định dưới đáy
-- `node shot.mjs --url=http://localhost:8080/` để kiểm bản đang chạy trên hosting
-
-### `node test-pwa.mjs` — 21 test PWA
-
-Tự bật `serve.mjs`, lái Chrome ở viewport điện thoại: manifest tải được và đủ trường ·
-mọi icon tải được thật · service worker đăng ký và activated · cache đã có file ·
-**tắt mạng bằng `Network.emulateNetworkConditions` rồi reload** → trang vẫn tải, vẫn đủ 5 tab,
-vẫn đủ 196 thẻ, `localStorage` vẫn ghi được.
-
-### Checklist mỗi lần sửa
+**Checklist mỗi lần sửa:**
 
 ```
-□ node test.mjs      → 39 đạt · 0 hỏng
-□ node build.mjs     → mọi mục ✓
-□ node shot.mjs      → KẾT QUẢ: sạch
-□ node test-pwa.mjs  → PWA: sạch
-□ Nhìn vài ảnh trong anh-chup/ — máy không bắt được lỗi thẩm mỹ
-□ Nếu sửa app/index.html: TĂNG PHIEN_BAN trong app/sw.js
+□ node --check trên phần <script> (tách bằng regex)
+□ Chụp cả 5 tab
+□ Chụp chế độ tối: documentElement.setAttribute('data-theme','dark')
+□ Chụp viewport 390px, kiểm tra không tràn ngang
+□ Đọc console errors (bỏ qua lỗi Google Fonts — container chặn mạng)
+```
+
+Tách JS để kiểm tra cú pháp:
+
+```python
+import re
+c = open('app.html', encoding='utf-8').read()
+open('/tmp/app.js','w',encoding='utf-8').write(
+    re.search(r'<script>(.*)</script>', c, re.S).group(1))
+# rồi: node --check /tmp/app.js
 ```
 
 ---
 
-## 10. PWA & HOSTING
+## 10. XUẤT BẢN
 
-Hướng dẫn thao tác cụ thể nằm ở **`HUONG-DAN-CAI-DAT.md`** (viết cho người dùng).
-Mục này chỉ ghi phần kỹ thuật cần biết khi sửa.
+```
+Artifact(file_path="/root/htdtc/app.html", favicon="🧭",
+         description="...", label="v3-...")
+```
 
-### Ba file làm nên PWA
+- URL hiện tại: `https://claude.ai/code/artifact/bdf1b91d-dd30-4433-88db-12356f194c63`
+- **Xuất bản lại cùng đường dẫn file = giữ nguyên URL.** Từ hội thoại khác thì phải
+  truyền `url=` để cập nhật đúng artifact.
+- Favicon giữ nguyên 🧭 — người dùng nhận ra tab bằng icon.
+- Tiêu đề nằm trong thẻ `<title>` ở đầu file, giữ ổn định.
 
-| File | Vai trò | Cạm bẫy |
-|---|---|---|
-| `manifest.webmanifest` | tên, icon, màu, `display:standalone` | `start_url` và `scope` phải là `"./"` — đường dẫn tuyệt đối sẽ hỏng khi đặt trong thư mục con của GitHub Pages |
-| `sw.js` | cache-first cho app shell | **`PHIEN_BAN` phải tăng mỗi lần sửa app**, nếu không điện thoại giữ mãi bản cũ |
-| `icons/` | 192 · 512 · maskable 512 · favicon 32 | icon maskable phải chừa **vòng an toàn 80%**, Android cắt theo hình launcher |
+**Về `capabilities`:** hiện **không khai báo gì**. Cân nhắc đã đưa ra:
 
-Sinh lại icon: `python tao-icon.py`. Màu lấy đúng từ design token, vẽ quá cỡ 4× rồi thu nhỏ
-để có viền mượt.
-
-### Service worker — những chỗ đã tính trước
-
-- Chỉ đăng ký khi `https:` hoặc `localhost` → mở bằng `file://` không đăng ký, bản một file
-  ở thư mục gốc vẫn chạy bình thường
-- Toàn bộ thao tác cache bọc `try/catch`; `install` nạp **lẻ từng file** thay vì `addAll`
-  để một file lỗi không làm hỏng cả lượt cài
-- `activate` xoá mọi cache tên `la-ban-*` không thuộc phiên bản hiện tại
-- Google Fonts (`fonts.googleapis.com`, `fonts.gstatic.com`) được cache riêng → offline vẫn đúng chữ
-- Điều hướng trang trả `index.html` từ cache rồi làm mới ngầm cho lần mở sau
-- Khi có bản mới, trang hiện `toast()` nhắc đóng hẳn app rồi mở lại
-
-### Tối ưu cảm ứng — những chỗ đã làm
-
-- `viewport-fit=cover` + `env(safe-area-inset-*)` cho máy có tai thỏ và thanh điều hướng
-- Mọi thứ bấm được **tối thiểu 44×44**. Ô tick trong lộ trình giữ nguyên kích thước hình vẽ 23px
-  nhưng mở rộng vùng bấm bằng `.tick::after{inset:-11px}`
-- `-webkit-tap-highlight-color:transparent` và khối `@media (hover:none)` gỡ hiệu ứng hover dính
-- Mọi ô nhập số có `inputmode="decimal"` để Android bật bàn phím số
-- **≤640px: thanh tab chuyển xuống đáy màn hình** kiểu app di động, dùng nhãn ngắn
-  (`.tabs .short`), `main` chừa `padding-bottom` cho nó
-
-> ⚠️ **Cạm bẫy đã mất công tìm ra:** `backdrop-filter` trên một tổ tiên sẽ tạo *containing block*
-> cho con `position:fixed`. `header.top` có `backdrop-filter:blur()`, nên thanh tab `fixed` bị neo
-> vào header thay vì vào viewport. Media query 640px phải tắt `backdrop-filter` của header thì
-> thanh tab mới xuống đáy được.
-
-### Riêng tư khi đặt trên hosting công khai
-
-App không có backend, không analytics, không đăng nhập — số liệu nằm hoàn toàn trong
-`localStorage` của máy người dùng. Trang web chỉ chứa mã nguồn. Ba lớp giảm rủi ro đã có sẵn:
-`<meta name="robots" content="noindex, nofollow">`, `app/robots.txt` chặn toàn bộ, và
-khuyến nghị đặt tên repo khó đoán.
-
-Muốn khoá hẳn bằng mật khẩu thì phải đổi sang **Cloudflare Pages + Cloudflare Access**
-(miễn phí tới 50 người) — dùng lại nguyên thư mục `app/`, không sửa code.
+- ❌ Không dùng capability `artifact` (lưu phiên bản mới của chính trang) — vì nó sẽ nhúng
+  **số liệu tài chính cá nhân vào HTML đã xuất bản**, đi theo trang nếu người dùng chia sẻ.
+- ✅ Dùng `localStorage` — riêng tư tuyệt đối, chỉ nằm trên máy người dùng.
+- ⚠️ **Việc cần làm:** mã nguồn đã gọi `claude.use("downloads")` cho nút xuất file sao lưu
+  (kèm phương án dự phòng là ô textarea để chép tay), **nhưng lần xuất bản gần nhất chưa
+  truyền `capabilities: {downloads: true}`**. Lần xuất bản tới phải thêm tham số đó, nếu
+  không nút xuất file sẽ luôn rơi vào nhánh dự phòng.
 
 ---
 
@@ -539,78 +353,39 @@ Muốn khoá hẳn bằng mật khẩu thì phải đổi sang **Cloudflare Page
 - [ ] Bổ sung phần **lạm phát** và **lãi suất kép** (có video riêng trên kênh)
 - [ ] Ghi nguồn từng thẻ cẩm nang (tập nào) để tra ngược
 
-### Đã làm xong ở chặng này
+### Tính năng
 
-**Ưu tiên cao (A1):**
-- [x] Máy tính **ngân sách 50/30/20** + quỹ dự phòng 12 tháng, cảnh báo chi phí cố định vượt 50%
-- [x] **Checklist 7 nguồn thu nhập** + tỷ lệ chủ động/thụ động + ẩn dụ vườn cây
-- [x] Phân loại **thợ săn / nông dân** + phép thử ba tháng
-- [x] **Chỉ số bội số nghỉ việc** với hai mốc 1,0× và 2,0×
-- [x] **Máy tính DCA** — hai đường trên một biểu đồ, nối sang quy tắc 4%, kèm backtest thật 2022
-- [x] **Máy tính MUA vs THUÊ** — port đúng `muathue.py`, điểm hoà vốn, bảng độ nhạy, 6 cảnh báo
-- [x] **Biểu mẫu Ikigai** — 4 ô tự do + 4 vùng giao
-- [x] **Ba nấc cuối tính tự động** trong tab Bản đồ + nhãn "bốn giai đoạn đo bốn thứ khác nhau"
-- [x] **Checklist 10 bài học đầu tư** chia 3 nhóm
-
-**Ưu tiên trung bình (A2):**
-- [x] Cảnh báo **tỷ lệ trả nợ / thu nhập vượt 40%**
-- [x] Ô nhập **"3 thứ quan trọng nhất với bạn"**
-- [x] **Checklist 9 nguyên tắc chi tiêu**
-- [x] **Checklist tự soi môi trường** — bạn bè / đồng nghiệp / nơi ở / bạn đời
-- [x] **Chỉ số gây dựng lại** — 4 yếu tố + số năm
-- [x] **Checklist 4 sai lầm đầu tư** + **4 câu hỏi tự soi về giá trị**
-- [x] **Danh sách vấn đề** (pain point journal)
-- [x] Câu hỏi **"con số nào đủ để bạn TỰ DO?"** đặt cạnh con số 25×
-- [x] **Timeline 18–35** — nhập tuổi, vị trí trên cả hai sơ đồ
-- [x] Ô nhập **"nếu 80 tuổi nhìn lại"** cạnh bội số nghỉ việc
-
-**PWA & kỹ thuật:**
-- [x] Tách thành `app/` với manifest, service worker, 4 icon; cài được lên Android
-- [x] Tối ưu cảm ứng: thanh tab dưới đáy, safe-area, 44×44, `inputmode`, gỡ hover dính
-- [x] Xuất file sao lưu **tải thật được trên Chrome Android** (blob download), kèm nhắc sao lưu 30 ngày
-- [x] Bộ kiểm thử tự động thay Playwright: `test.mjs` · `shot.mjs` · `test-pwa.mjs` · `build.mjs`
-- [x] Sinh icon bằng `tao-icon.py`
-
-### Còn lại
-
-**Nội dung**
-- [ ] Ghi nguồn từng thẻ cẩm nang (tập nào / tài liệu nào) để tra ngược
-- [ ] Các playlist khác trên `@hieu-tv`
-
-**Tính năng — từ backlog cũ, vẫn chưa làm**
-- [ ] **Nhật ký chi tiêu** theo đúng phương pháp Bước 4: nhập nhanh tên · ngày · số tiền rồi
-      phân ba nhóm Must-have / Nice-to-have / Waste, tự tính ra mức tối thiểu và tiêu chuẩn
-      thay vì bắt người dùng tự ước lượng. *Đây là thứ đáng làm nhất còn lại.*
-- [ ] **Bảng trả nợ** — nhập từng khoản, xếp ưu tiên theo lãi suất, sinh lộ trình theo tháng.
-      Ô `inp.debtPay` đã có sẵn để nối vào.
-- [ ] **Bốn tài khoản** — waterfall Emergency → Sinking → Investment
-- [ ] **Sổ nguồn thu nhập thụ động** — từng "con bò": tên, vốn, dòng tiền, trạng thái;
-      nối vào checklist 7 nguồn đã có
-- [ ] Biểu đồ **tỷ lệ bao phủ theo thời gian** (thụ động ÷ chi tiêu), dữ liệu đã có trong `log[].pi`
+- [ ] **Nhật ký chi tiêu** — hiện thực đúng phương pháp Bước 4: nhập nhanh
+      (tên · ngày · số tiền) rồi phân 3 nhóm Must-have / Nice-to-have / Waste,
+      tự tính ra mức tối thiểu và tiêu chuẩn thay vì bắt người dùng tự nhập
+- [ ] **Bảng trả nợ** — nhập từng khoản (số tiền, lãi suất), tự xếp thứ tự ưu tiên
+      theo lãi suất cao nhất và sinh lộ trình trả theo tháng *(đây là thứ tạo ra
+      giá trị tâm lý lớn nhất theo đúng tinh thần Phần 4)*
+- [ ] **Bốn tài khoản** — công cụ chia dòng tiền, tính số tiền tự động chuyển mỗi tháng
+      và mô phỏng waterfall Emergency → Sinking → Investment
+- [ ] **Sổ nguồn thu nhập thụ động** — quản lý từng "con bò": tên, vốn, dòng tiền/tháng,
+      trạng thái; nối vào máy tính hiện có
+- [ ] Biểu đồ **tỷ lệ bao phủ theo thời gian** (thụ động / chi tiêu)
 - [ ] **Chế độ in / xuất PDF** cho phần cẩm nang
-- [ ] **Nhắc định kỳ** hằng tháng nhập số liệu (Notification API, cần xin quyền)
+- [ ] **Nhắc định kỳ** hằng tháng nhập số liệu (dùng scheduled task)
 
-**Kỹ thuật**
-- [ ] Tách `KB` và `STEPS` ra file JSON riêng, dựng `index.html` bằng script — dễ sửa nội dung hơn.
-      *Cân nhắc kỹ: nó phá vỡ tính "một file tự chứa" của bản ở thư mục gốc.*
-- [ ] Cân nhắc **Cloudflare Pages + Access** nếu muốn khoá trang bằng mật khẩu
-- [ ] Đóng gói APK bằng Bubblewrap — xem mục 7 của `HUONG-DAN-CAI-DAT.md`
+### Kỹ thuật
+
+- [ ] Tách `KB` và `STEPS` ra file JSON riêng, dựng `app.html` bằng script — dễ sửa nội dung hơn
+- [ ] Viết test nhỏ cho `monthsTo()` và `calc()` (Node, không cần framework)
+- [ ] Migrate schema `v1 → v2` khi thêm nhật ký chi tiêu
 
 ---
 
 ## 12. NGUYÊN TẮC KHI SỬA
 
-1. **Một file, không framework, không npm.** `build.mjs` chỉ kiểm tra rồi sao chép — nó không
-   biên dịch gì cả, gỡ nó ra thì app vẫn chạy. Giá trị lớn nhất của app này là mở phát chạy ngay,
-   offline cũng được.
+1. **Một file, không build step.** Đừng thêm bundler hay framework — giá trị lớn nhất của
+   app này là mở phát chạy ngay, offline cũng được.
 2. **Không đưa dữ liệu tài chính cá nhân ra khỏi máy người dùng.** Không analytics,
    không capability lưu state chung.
-3. **Mọi màu qua token**, mọi số tiền qua `money()`, mọi số lẻ qua `dec()`, mọi khoảng thời gian
-   qua `yrs()`. Sửa công thức thì chạy `node test.mjs` trước khi build.
-4. **Trung thực về giới hạn.** Quy tắc 4% là quy ước, không phải bảo đảm. Máy tính mua/thuê
-   không mô phỏng kịch bản giá nhà giảm. DCA giả định tỷ suất không đổi. **Giữ nguyên toàn bộ
-   các khối cảnh báo đã có** — đặc biệt sáu điều ở cuối máy tính mua/thuê, thiếu chúng thì con số
-   sẽ bị dùng sai. App không đưa ra lời khuyên đầu tư hay lời khuyên bất động sản.
+3. **Mọi màu qua token**, mọi số qua `money()`, mọi khoảng thời gian qua `yrs()`.
+4. **Trung thực về giới hạn.** Quy tắc 4% là quy ước, không phải bảo đảm — giữ nguyên
+   các dòng cảnh báo đã có.
 5. **Ghi nguồn.** Nội dung là đúc kết từ series của Hieu Nguyen (HIEU.TV) — giữ phần
    ghi nguồn ở footer, và luôn viết lại bằng lời của mình chứ không chép nguyên văn.
 
@@ -631,8 +406,113 @@ Muốn khoá hẳn bằng mật khẩu thì phải đổi sang **Cloudflare Page
 Cẩm nang markdown đã đồng bộ: **56 chương** — chương XX trở đi sinh tự động từ mảng `KB`.
 Công cụ: **196 thẻ / 51 nhóm**.
 
+### Tab Bộ lọc (`#p-screen`) — đã làm
+
+Tab thứ 3 trong thanh nav. Chấm một mã cổ phiếu theo số liệu người dùng tự nhập.
+
+**Nguyên tắc thiết kế quan trọng nhất — đừng phá:**
+
+> Công cụ chấm **hai điểm số tách riêng** và **không bao giờ cộng chúng lại**.
+> Một điểm tổng duy nhất sẽ che mất chính thông tin có giá trị nhất: khi nào hai tín hiệu
+> đang mâu thuẫn với nhau. Nếu sau này có ai đề nghị "gộp lại cho gọn" thì đó là đề nghị
+> phá bỏ toàn bộ lý do tồn tại của tính năng này.
+
+**State:** `S.scr` trong `localStorage` key `htdtc.v1`
+`{ticker, cap, pe, pb, roe, de, froom, chg12, deposit, ftse}`.
+Ô để trống lưu là `null` (không phải `0`) — dùng `scNum()` và `scHas()`, **không dùng
+`num()`** vì `num("")` trả về `0` và sẽ bị chấm điểm nhầm.
+
+**Thang điểm** — mỗi tiêu chí 0/1/2, ô chưa nhập không tính vào cả tử số lẫn mẫu số:
+
+| Luồng | Tiêu chí | 2 điểm | 1 điểm | 0 điểm |
+|---|---|---|---|---|
+| Giá trị | Vốn hoá | ≥ 10.000 tỷ | 5.000–10.000 | < 5.000 |
+| Giá trị | P/E | 0 < PE ≤ 12 | 12–18 | ≤ 0 hoặc > 18 |
+| Giá trị | P/B | 0,7–1,5 | < 0,7 hoặc 1,5–3 | > 3 |
+| Giá trị | ROE | ≥ 15% | 10–15% | < 10% |
+| Giá trị | Nợ vay/Vốn chủ | ≤ 0,5 | 0,5–1,0 | > 1,0 |
+| Động lượng | Room ngoại còn lại | > 20% | 5–20% | < 5% |
+| Động lượng | Đà giá 12 tháng | > +30% | 0 đến +30% | < 0 |
+| Động lượng | Ứng viên FTSE | Có | — | Không |
+
+*P/B dưới 0,7 cố ý cho **1 điểm chứ không phải 2** — rẻ bất thường là tín hiệu mơ hồ, không
+phải tín hiệu tốt.*
+
+**Bộ phát hiện mâu thuẫn** (`SCR_VERDICT`) — chia bốn góc tại ngưỡng 60%:
+
+| Giá trị | Động lượng | Kết luận |
+|---|---|---|
+| cao | cao | Nghi ngờ dữ liệu — P/E nhiều khả năng là trailing trong khi giá đã chạy trước |
+| **thấp** | **cao** | **MÂU THUẪN — mua đà chứ không mua giá trị. Và đừng DCA vào giao dịch có ngày hết hạn** |
+| cao | thấp | Hình dạng cơ hội giá trị *và* hình dạng bẫy giá trị — không phân biệt được từ bên trong |
+| thấp | thấp | Không có tín hiệu đủ mạnh |
+
+**Cờ đỏ cứng** (luôn hiện, độc lập với điểm): P/E ≤ 0 · P/E > 30 · P/B < 0,7 · ROE > 40%
+· ROE < 5% · Nợ/Vốn chủ > 2 · vốn hoá < 10.000 tỷ · room ngoại ≈ 0 · đà 12 tháng > +80% ·
+lợi suất lợi nhuận (1/PE) thấp hơn lãi tiết kiệm · FTSE bật mà room ngoại < 5%
+(mâu thuẫn trực tiếp).
+
+**Chế độ ngành (`S.scr.sector`)** — `"normal"` | `"bank"`, đổi bằng nút phân đoạn `#sc-sector`.
+
+Ba nhóm trường: `SCR_V` (luôn có: vốn hoá, P/E, P/B, ROE) · `SCR_SEC[sector]` (thay nhau,
+**không bao giờ hiện cùng lúc**) · `SCR_TREND` (chỉ chế độ ngân hàng, **không chấm điểm**,
+chỉ dùng cho cờ xu hướng). `applySector()` dựng lại `#scf-sec` và ẩn/hiện `#scf-trendwrap`.
+
+| | Doanh nghiệp thường | Ngân hàng |
+|---|---|---|
+| Điểm tối đa luồng giá trị | **10** | **14** |
+| Đòn bẩy | Nợ vay / Vốn chủ | **CAR** — thay thế hoàn toàn |
+| Thêm | — | **Nợ xấu (NPL)**, **Bao phủ nợ xấu (PCR)** |
+| Nhập thêm không chấm điểm | — | NPL quý trước, NPL 2 quý trước |
+
+**Vì sao gỡ D/E ở chế độ ngân hàng:** tiền gửi khách hàng là nguồn vốn kinh doanh của ngân
+hàng. Mọi ngân hàng đều có tỷ lệ 5–10 lần, nên tiêu chí này đánh trượt toàn bộ ngành —
+nó không phân biệt được gì. Đây là lỗi phát hiện được khi chạy thử VPB.
+
+**Thang điểm chế độ ngân hàng:**
+
+| Tiêu chí | 2 điểm | 1 điểm | 0 điểm |
+|---|---|---|---|
+| CAR | > 12% | 9–12% | < 9% |
+| Nợ xấu | < 2% | 2–3% | > 3% |
+| Bao phủ nợ xấu | > 100% | 50–100% | < 50% |
+| **P/B (ngân hàng)** | **1,0–1,4** | 0,8–1,0 hoặc 1,4–2,0 | < 0,8 hoặc > 2,0 |
+
+*P/B ngân hàng khác hẳn doanh nghiệp thường: dưới 0,8 cho **0 điểm chứ không phải 1**, vì
+với ngân hàng, giá dưới giá trị sổ sách thường phản ánh nghi ngờ về chất lượng sổ cho vay
+chứ không phải món hời.*
+
+**Cờ đỏ riêng của chế độ ngân hàng** (nâng tổng lên 16): CAR < 9% · nợ xấu > 3% ·
+bao phủ < 50% · bao phủ 50–80% (cảnh báo nhẹ) · P/B < 0,8 · **nợ xấu tăng hai quý liên tiếp**.
+
+**Cách implement cờ "nợ xấu tăng nhanh hơn tăng trưởng tín dụng":**
+tỷ lệ nợ xấu = nợ xấu ÷ dư nợ, nên *tỷ lệ tăng* **tương đương chính xác** với *nợ xấu tăng
+nhanh hơn dư nợ*. Không cần nhập tăng trưởng tín dụng riêng — chỉ cần chuỗi
+`npl2 < npl1 < npl` là đủ và đúng về mặt toán học. Tăng một quý thì ra cảnh báo nhẹ, hai
+quý liên tiếp mới lên `crit`.
+
+**Bộ số đã kiểm chứng để làm test:**
+
+| Đầu vào | Kỳ vọng |
+|---|---|
+| cap 250000 · PE 9,5 · PB 1,2 · ROE 18 · D/E 0,4 · room 25 · đà +12 · FTSE tắt | Giá trị **10/10** · Động lượng **3/6** · lợi suất **10,5%** · kết luận *bẫy giá trị* |
+| cap 250000 · PE 32 · PB 4,5 · ROE 7 · D/E 2,4 · room 25 · đà +95 · FTSE bật | Giá trị **2/10** · Động lượng **6/6** · **5 cảnh báo** · kết luận *MÂU THUẪN* |
+
+**Bộ test chế độ ngân hàng** (`/tmp/vbank.py`, 9 nhóm, tất cả đạt): mặc định đúng chế độ ·
+đổi chế độ thì D/E biến mất và CAR/NPL/PCR hiện · ngân hàng lành mạnh ra 14/14 ·
+thang P/B chạy đúng ở 6 mốc (0,75→0 · 0,9→1 · 1,0→2 · 1,4→2 · 1,6→1 · 2,4→0) ·
+chuỗi nợ xấu 2,6→3,0→3,4 bật cờ `crit`, còn 3,9→3,6→3,4 thì không · quay lại chế độ thường
+ra 10/10 và bảng không còn dòng CAR · chế độ sống sót qua reload · 196 thẻ và 52 chip nguyên vẹn.
+
+*Lưu ý cho người viết test sau này:* các ô giữ nguyên giá trị khi đổi tiêu chí, nên khi
+kiểm tra một tiêu chí đơn lẻ phải tính cả điểm của những ô còn sót lại từ bài test trước —
+bài test đầu tiên của mục này sai đúng vì lý do đó.
+
+Đã verify ở 1180px và 360px, không tràn ngang, không `pageerror`, dữ liệu sống sót qua
+reload. Nguồn lấy số cho từng ô: xem `NGUON-SO-LIEU.md`.
+
 ### Quy trình đồng bộ cẩm nang ↔ app
-1. Thêm thẻ mới vào mảng `KB` trong `app/index.html` (chèn trước `\n];`).
+1. Thêm thẻ mới vào mảng `KB` trong `app.html` (chèn trước `\n];`).
 2. **Tên nhóm (`g`) phải dùng ký tự thật, KHÔNG dùng HTML entity.** Dùng `&`, không dùng `&amp;`.
    Lý do thật sự **không phải** ở khâu hiển thị — `el()` dùng `innerHTML` nên chip vẫn hiện đúng — mà ở
    khâu **so khớp chuỗi**: `gen2.py` đối chiếu `k['g']` với bảng `ORDER` bằng `==`, nên `"A &amp; B"`
@@ -644,14 +524,45 @@ Công cụ: **196 thẻ / 51 nhóm**.
    thế **toàn bộ** phần từ `## XX.` tới footer và **dựng lại mục lục**, nên hai bản không bao giờ lệch.
    Chương I–XIX viết tay giữ nguyên. Thẻ mới thêm vào nhóm *đã* có chương viết tay thì liệt kê tên
    trong `EXTRA_TITLES` để rơi vào chương "Bổ sung" ở cuối. Số La Mã sinh bằng hàm, không hard-code.
-5. `node build.mjs` — kiểm cú pháp, kiểm PWA, rồi sinh lại `La-Ban-Tu-Do-Tai-Chinh.html`.
-6. `node shot.mjs` — nó tự đếm thẻ và chips (phải ra **196/52**, kể cả chip "Tất cả"), thử tìm kiếm
-   và lọc nhóm, duyệt hết tab/pane ở hai kích thước màn hình, bắt `pageerror`.
-   **Kiểm bằng mắt phần chip: không được lẫn HTML entity.**
-7. Tăng `PHIEN_BAN` trong `app/sw.js`, rồi `git push` để GitHub Pages dựng lại.
+5. Dựng lại `standalone.html` / `La-Ban-Tu-Do-Tai-Chinh.html` bằng cách bọc `app.html` trong khung
+   `<!doctype html>` (artifact tự bọc nên `app.html` không chứa khung này).
+6. Verify bằng Playwright: đếm chips + số thẻ, **kiểm tra chip không lẫn HTML entity**, thử vài từ khoá
+   mới, click thử nhóm mới, duyệt hết các tab, kiểm tra tràn ngang, bắt `pageerror`.
+7. Republish artifact **cùng URL**, rồi `device_commit_files` về thư mục của người dùng.
 
-### Số tham chiếu — dùng làm gợi ý mặc định hoặc chú thích
+### Ý tưởng tính năng chưa làm (tích luỹ qua các chặng)
+**Ưu tiên cao — đã có đủ dữ liệu để code ngay:**
+- **Máy tính DCA**: nhập số tiền/tháng + số năm + tỷ suất → hai đường (chỉ tích luỹ vs có đầu tư), nối
+  thẳng sang quy tắc 4% ra thu nhập thụ động/tháng. *Đường dẫn mẫu đã có sẵn: 10 triệu/tháng × 20 năm ×
+  10%/năm → 7,1 tỷ → 23 triệu/tháng (so với chỉ tích luỹ được 2,4 tỷ).*
+- **Máy tính ngân sách 50/30/20** + mục tiêu quỹ dự phòng **12 tháng**: nhập thu nhập → app tính từng
+  khoản và so với số thực tế người dùng đang có *(bài "Tiêu tiền thế nào cho hợp lý")*
+- **Checklist 7 nguồn thu nhập**: đánh dấu đang có nguồn nào, nhập số tiền, app tính **tỷ lệ chủ động /
+  thụ động** và "bạn đang dựa vào bao nhiêu nguồn" *(bài "7 nguồn thu nhập")*
+- **Phân loại Thợ săn / Nông dân ngắn ngày / Nông dân dài ngày** dựa trên tỷ lệ thu nhập thụ động /
+  chi tiêu, kèm phép thử *"nếu mình biến mất 3 tháng, thu nhập nào còn lại?"*
+- **Chỉ số bội số nghỉ việc**: thu nhập thụ động ÷ lương, hai mốc **1,0×** và **2,0×**
+- ~~**Bộ lọc cổ phiếu hai luồng**~~ — **ĐÃ LÀM**, xem mục *Tab Bộ lọc* bên dưới
+- **Máy tính MUA vs THUÊ NHÀ** — mô hình đã dựng và kiểm chứng xong, xem `model/muathue.py`. Đầu ra
+  quan trọng nhất là **điểm hoà vốn**: nhà phải tăng bao nhiêu %/năm thì mua mới hoà với thuê-rồi-đầu-tư.
+- **Biểu mẫu Ikigai** — 4 ô nhập tự do (thích làm · làm giỏi · xã hội cần · làm ra tiền), lưu localStorage
+- **Checklist 10 bài học đầu tư** — tự chấm, cùng kiểu với checklist 9 nguyên tắc chi tiêu
+- **Đối chiếu 12 nấc thang** với tab Bản đồ — nấc 10/11/12 tính tự động từ thu nhập thụ động so với ba
+  mức chi tiêu (tối thiểu / hiện tại / mong muốn) mà người dùng đã nhập
+- **Timeline 18–35** — nhập tuổi hiện tại → app chỉ ra vị trí trên cả hai sơ đồ *lối mòn* và *đáng sống*,
+  và còn bao nhiêu năm trong "cửa sổ đầu tư 18–35"
 
+**Ưu tiên trung bình:**
+- **Cảnh báo tỷ lệ trả nợ / thu nhập vượt 40%** trong máy tính *(bài "Tuổi trẻ có nên mua nhà")*
+- Ô nhập **"3 thứ quan trọng nhất với bạn"** để đối chiếu với chi tiêu thực tế *(bài "Nguyên tắc chi tiêu P2")*
+- **Checklist 9 nguyên tắc chi tiêu** để người dùng tự đánh dấu đã áp dụng được nguyên tắc nào
+- **Checklist tự soi môi trường** — bạn bè / đồng nghiệp / nơi ở / bạn đời *(bài "Kiến tạo môi trường")*
+- **Chỉ số gây dựng lại**: tự chấm 4 yếu tố (kiến thức, kinh nghiệm, quan hệ, uy tín) + ước lượng số năm
+- **Checklist 4 sai lầm đầu tư** + **4 câu hỏi tự soi về giá trị**
+- **Danh sách vấn đề** (pain point journal) — ô nhập nhanh, lưu localStorage
+- **Câu hỏi "con số nào đủ để bạn TỰ DO?"** đặt cạnh con số 25×
+
+**Số tham chiếu đã thu được:**
 - Mốc tự do tài chính ở thành phố lớn VN: **~10–15 tỷ**
 - Vốn khởi điểm để bắt đầu đầu tư: **10–20 triệu** (nước ngoài: vài trăm đô)
 - Hiệu suất 20 năm tại VN (Dragon Capital 2021): cổ phiếu 15,9% · BĐS 11,9% · vàng 9% · tiết kiệm 8% · USD 2,2%
@@ -664,10 +575,4 @@ Công cụ: **196 thẻ / 51 nhóm**.
 - Knight Frank Luxury Investment Index 10 năm tới Q2/2019: cả rổ **+146% (9,4%/năm)** · whisky +540%
   (20,4%) · xe cổ +190% · tranh +146% · đồ nội thất **−30%**. *Không tính phí giao dịch và lưu trữ*
 - Dunning–Kruger 1999: nhóm tứ phân vị thấp nhất thật ra ở **phân vị 12**, tự cho mình ở **phân vị 62**
-- Backtest thật ở VN, kịch bản xấu nhất (vào đúng đỉnh 1/2022): DCA 10tr/th trong 30 tháng →
-  vốn 300tr → giá trị **~337tr** (~5%/năm). Cùng lúc đó bỏ một cục 1 tỷ đang lỗ **~200tr**.
-  *Đây là lý lẽ mạnh nhất cho DCA — đã hiển thị trong pane Máy tính DCA.*
-- Tỷ suất tham chiếu: thụ động dài hạn **7–10%/năm** là đủ đi đường dài; đội ngũ chuyên nghiệp
-  hướng tới 20–30% và không phải lúc nào cũng đạt. Lời hứa 100%/năm là báo động đỏ.
-- Ô *lợi nhuận kỳ vọng* trong tab Con số mặc định **6%** (thực, đã trừ lạm phát); ô *tỷ suất kỳ vọng*
-  của máy tính DCA mặc định **10%** (danh nghĩa). Hai ô khác nhau, cố ý.
+- Ô *tỷ suất kỳ vọng* hiện mặc định 6% — có thể gợi ý theo số liệu trên
