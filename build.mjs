@@ -38,7 +38,7 @@ try { new vm.Script(js[1], { filename: "index.html:<script>" }); bao(true, "cú 
 catch (e) { bao(false, "lỗi cú pháp JS: " + e.message); process.exit(1); }
 
 // --- các file PWA phải có mặt ---
-for (const f of ["app/manifest.webmanifest", SW,
+for (const f of ["app/manifest.webmanifest", SW, "app/ai-worker.js",
   "app/icons/icon-192.png", "app/icons/icon-512.png",
   "app/icons/icon-maskable-512.png", "app/icons/favicon-32.png"]) {
   bao(existsSync(f), f);
@@ -70,9 +70,63 @@ bao(app.includes('data-t="lk"') && app.includes('id="p-lk"'), "tab Lãi kép có
 bao(/id="chartjs-cdn"[^>]*integrity="sha384-/.test(app), "thẻ Chart.js có khoá SRI");
 bao(app.includes('id="lk-canvas"'), "có canvas cho biểu đồ lãi kép");
 
-// --- trợ lý AI: ô giao diện và hàm suy luận phải đi cùng nhau ---
+// --- trợ lý AI: ô giao diện, hộp xin phép, và hai đường suy luận ---
 bao(app.includes('id="aibox"') && app.includes("async function generateLocalAIAnalysis"),
     "trợ lý AI có cả ô lẫn hàm generateLocalAIAnalysis");
+bao(app.includes('id="ai-activate"') && app.includes('id="ai-status"'),
+    "có nút kích hoạt và ô trạng thái mô hình");
+bao(app.includes('<dialog id="ai-hoi"'), "có hộp xin phép trước khi tải mô hình");
+bao(/@mlc-ai\/web-llm@\d+\.\d+\.\d+\//.test(app), "WebLLM được ghim đúng phiên bản");
+bao(app.includes("function phanTichTheoLuat"),
+    "vẫn còn bộ luật dự phòng khi không có mô hình");
+// Mô hình sinh chữ tự do; đưa thẳng vào innerHTML là mở cửa cho XSS.
+bao(/esc\(cau\)/.test(app), "chữ do mô hình sinh ra được esc() trước khi hiện");
+// Mô hình 0,5B đã từng bịa ra dòng điểm "4/13 (35%)". Hàng rào này chặn việc đó.
+bao(app.includes("function hopLeCau"), "có hàng rào loại bỏ chữ mô hình bịa số");
+// Chạy mô hình trên luồng chính làm đứng hình cả tab — phải là worker.
+// Bắt lời GỌI thật (`await CreateMLCEngine(`), không bắt tên hàm nhắc trong ghi chú.
+bao(app.includes("CreateWebWorkerMLCEngine") && !/await\s+CreateMLCEngine\s*\(/.test(app),
+    "mô hình chạy trong luồng phụ, không phải luồng chính");
+// Đã gặp lời gọi sinh chữ không bao giờ trả về. Không có hàng rào này thì nút kẹt vĩnh viễn.
+bao(app.includes("AI_HAN_GIAY") && /Promise\.race\(\[chay, hetGio\]\)/.test(app),
+    "lời gọi mô hình có hàng rào thời gian");
+// hasModelInCache() kéo theo 6,5 MB thư viện, mà việc dò cache chạy mỗi lần mở app.
+// Chỉ cấm việc IMPORT nó — nhắc tên trong ghi chú giải thích thì vẫn được.
+bao(!/\{[^}]*hasModelInCache[^}]*\}\s*=\s*await import/.test(app),
+    "không import thư viện WebLLM chỉ để dò cache lúc mở app");
+
+/* ---------- BẤT BIẾN NỘI DUNG ----------
+   Ba con số này là xương sống của app. Mọi lần refactor đều phải giữ nguyên,
+   nên khoá cứng ở đây: sai một thẻ là build hỏng, không cần ai để ý bằng mắt. */
+{
+  // cắt `const KB = [ … ]` bằng cách đếm ngoặc, bỏ qua ngoặc nằm trong chuỗi
+  const cat = (ten) => {
+    const d = js[1].indexOf(`const ${ten} = [`);
+    if (d < 0) return null;
+    const s = d + `const ${ten} = `.length;
+    let sau = 0, nhay = null, thoat = false;
+    for (let i = s; i < js[1].length; i++) {
+      const c = js[1][i];
+      if (thoat) { thoat = false; continue; }
+      if (nhay) { if (c === "\\") thoat = true; else if (c === nhay) nhay = null; continue; }
+      if (c === '"' || c === "'" || c === "`") { nhay = c; continue; }
+      if ("[{(".includes(c)) sau++;
+      if ("]})".includes(c)) { sau--; if (sau === 0) return js[1].slice(s, i + 1); }
+    }
+    return null;
+  };
+  const nguon = cat("KB");
+  if (!nguon) { bao(false, "không cắt được mảng KB"); }
+  else {
+    const KB = new vm.Script("(" + nguon + ")").runInNewContext();
+    const nhom = new Set(KB.map(k => k.g));
+    bao(KB.length === 196, `196 thẻ cẩm nang — đếm được ${KB.length}`);
+    // chip lọc = mỗi nhóm một cái, cộng chip "Tất cả"
+    bao(nhom.size + 1 === 52, `52 chip lọc — đếm được ${nhom.size + 1}`);
+  }
+  const co = (app.match(/flags\.push/g) || []).length;
+  bao(co === 19, `19 luật cờ đỏ trong bộ lọc — đếm được ${co}`);
+}
 
 // --- số liệu tự động ---
 bao(app.includes('fetch("./data.json"'), "app có đọc data.json");

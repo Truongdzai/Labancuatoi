@@ -433,6 +433,15 @@ nav.tabs button, .btn, .chips button, .subtabs button{min-height:44px}
   .topbar{flex-wrap:nowrap}
 }
 
+/* ---------- hộp xin phép tải mô hình ---------- */
+dialog.hoi{
+  border:1px solid var(--line-2); border-radius:14px; background:var(--surface); color:var(--ink);
+  max-width:560px; width:calc(100% - 32px); padding:22px; box-shadow:var(--shadow);
+}
+dialog.hoi::backdrop{background:rgba(0,0,0,.55); backdrop-filter:blur(2px)}
+dialog.hoi .callout{font-size:13px}
+dialog.hoi ul{font-size:13px}
+
 @media (prefers-reduced-motion:reduce){*{transition:none!important; animation:none!important}}
 </style>
 </head>
@@ -790,11 +799,21 @@ nav.tabs button, .btn, .chips button, .subtabs button{min-height:44px}
       <div style="flex:1;min-width:230px">
         <div class="eyebrow">Chạy trong máy bạn</div>
         <h3 style="font-size:17px;margin:5px 0 3px">Trợ lý AI Nội bộ</h3>
-        <p style="font-size:13px;color:var(--ink2);line-height:1.6">Đọc lại toàn bộ điểm số và cảnh báo ở trên rồi viết thành một đoạn nhận xét liền mạch — nêu rõ chỗ nào mâu thuẫn và bạn còn thiếu số nào.</p>
+        <p style="font-size:13px;color:var(--ink2);line-height:1.6">Đọc lại toàn bộ điểm số và cảnh báo ở trên rồi viết thành một đoạn nhận xét liền mạch — nêu rõ chỗ nào mâu thuẫn và bạn còn thiếu số nào. Bật thêm mô hình ngôn ngữ thì có thêm ba câu về những rủi ro định giá đang bị che khuất.</p>
       </div>
       <button class="btn primary" id="ai-run" type="button">Viết nhận xét</button>
     </div>
-    <div class="note" id="ai-engine"></div>
+
+    <!-- trạng thái bộ suy luận + nút kích hoạt mô hình -->
+    <div style="margin-top:14px;padding-top:13px;border-top:1px solid var(--line)">
+      <div id="ai-status" style="font-size:13px;color:var(--ink2);line-height:1.6"></div>
+      <div class="row" style="margin-top:11px;align-items:center">
+        <select id="ai-chon" aria-label="Chọn mô hình"
+          style="padding:8px 11px;border-radius:9px;border:1px solid var(--line-2);background:var(--surface);color:var(--ink);font:inherit;font-size:13px"></select>
+        <button class="btn primary" id="ai-activate" type="button">Kích hoạt Trợ lý AI</button>
+      </div>
+    </div>
+
     <div id="ai-out" style="margin-top:12px" hidden></div>
   </div>
 
@@ -1043,6 +1062,33 @@ nav.tabs button, .btn, .chips button, .subtabs button{min-height:44px}
     <br>Ba nơi đó thấy được địa chỉ IP của bạn, đúng như mọi trang web bạn mở. Chúng <strong>không</strong> thấy con số nào bạn nhập, vì những con số ấy không bao giờ được gửi đi. Sau lần mở đầu tiên, cả ba đều được lưu lại trong máy nên các lần sau app chạy được cả khi mất mạng.
   </div>
 </section>
+
+<!-- Hộp xin phép trước khi tải mô hình. Tải vài trăm MB về máy người khác là
+     việc phải hỏi trước, không phải việc lặng lẽ làm rồi báo sau. -->
+<dialog id="ai-hoi" class="hoi">
+  <h3 style="font-size:19px;letter-spacing:-.02em;margin-bottom:8px">Tải mô hình <span id="ai-hoi-ten"></span> về máy bạn?</h3>
+  <p style="font-size:14px;color:var(--ink2);line-height:1.65">Bấm đồng ý thì trình duyệt sẽ tải khoảng <strong id="ai-hoi-mb"></strong> dữ liệu mô hình và giữ luôn trong bộ nhớ của nó. Lần sau mở lại <strong>không phải tải nữa</strong>.</p>
+  <p style="font-size:13px;color:var(--ink2);line-height:1.6;margin-top:9px" id="ai-hoi-ghi"></p>
+
+  <div class="callout" style="margin-top:14px">
+    <strong>Việc này vẫn giữ đúng lời hứa riêng tư của app.</strong> Mô hình chạy bằng WebGPU — tức là bằng chính card đồ hoạ trong máy bạn. Con số bạn nhập <strong>không rời khỏi máy</strong>, không có máy chủ nào nhận được chúng, và app vẫn không cần bạn đăng nhập. Việc tải về là một chiều: máy bạn lấy mô hình xuống, không gửi gì lên.
+  </div>
+
+  <div class="callout" style="margin-top:10px;border-left-color:var(--warn)">
+    <strong>Nói cho đủ.</strong> Ba nơi sau sẽ thấy địa chỉ IP của bạn trong lúc tải, đúng như mọi trang web bạn mở:
+    <ul style="margin:8px 0 0 18px;line-height:1.7">
+      <li><strong>jsDelivr</strong> — mã nguồn thư viện WebLLM</li>
+      <li><strong>Hugging Face</strong> — trọng số của mô hình</li>
+      <li><strong>GitHub</strong> — tệp nhân WebGPU đi kèm mô hình</li>
+    </ul>
+    <br>Mô hình chiếm khoảng <strong id="ai-hoi-vram"></strong> bộ nhớ đồ hoạ khi chạy. Máy yếu có thể chậm hoặc không nạp nổi — lúc đó app tự quay về bộ luật nội bộ, không hỏng gì cả. Bạn xoá mô hình khỏi máy bất cứ lúc nào bằng nút ngay cạnh đây.
+  </div>
+
+  <div class="row" style="margin-top:16px;justify-content:flex-end">
+    <button class="btn" id="ai-hoi-dong" type="button">Thôi, để sau</button>
+    <button class="btn primary" id="ai-hoi-ok" type="button">Đồng ý, tải về</button>
+  </div>
+</dialog>
 
 <footer class="wrap foot">
   <p><strong>Nguồn.</strong> Nội dung được đúc kết và viết lại từ series “Hành trình tự do tài chính” của Hieu Nguyen (HIEU.TV). Đây là bản tóm lược để học và áp dụng, không thay thế việc xem đầy đủ các tập gốc.</p>
@@ -2239,6 +2285,7 @@ const DEF = {
   ikigai:{a:"", b:"", c:"", d:""},      // bốn ô suy ngẫm, chữ tự do
   dca:{pmt:10, nam:20, rate:10},        // máy tính đầu tư đều đặn
   lk:{von:0, pmt:10, rate:10, nam:20},  // tab Lộ trình Lãi kép — mọi tiền tính bằng TRIỆU ₫
+  ai:{daBat:false, model:""},           // trợ lý AI: đã kích hoạt chưa, mô hình nào
   nha:{                                 // máy tính mua vs thuê — mọi giá trị TRIỆU ₫
     loai:"cc", gia:3000, von:900, nam:25, kyHan:25, thueThang:10, soLanChuyen:1,
     lai:11, tangGia:5, phiThang:1.2, lamPhat:4, loiSuat:10, coPhiBaoTri:true,
@@ -2274,6 +2321,7 @@ function merge(p){
     ikigai:{...b.ikigai, ...obj(p.ikigai)},
     dca:{...b.dca, ...obj(p.dca)},
     lk:{...b.lk, ...obj(p.lk)},
+    ai:{...b.ai, ...obj(p.ai)},
     nha:{...b.nha, ...obj(p.nha), phi:{...b.nha.phi, ...obj(obj(p.nha).phi)}},
     baThu:{...b.baThu, ...obj(p.baThu)},
     values:{...b.values, ...obj(p.values)},
@@ -4422,43 +4470,353 @@ try{
 }catch(e){ /* trình duyệt cũ: MediaQueryList không có addEventListener */ }
 
 /* ============================================================
-   TRỢ LÝ AI NỘI BỘ — hôm nay là bộ luật, chỗ cắm cho WebLLM đã sẵn
+   TRỢ LÝ AI NỘI BỘ — WebLLM chạy trên WebGPU, ngay trong máy người dùng
    ============================================================ */
-/* generateLocalAIAnalysis là RANH GIỚI duy nhất giữa giao diện và bộ suy luận.
-   Nó bất đồng bộ và trả về một hình dạng cố định, nên khi thay ruột bằng WebLLM
-   (Llama-3 / Gemma chạy trên WebGPU) thì phần giao diện phía dưới không phải sửa gì:
+/* HAI BỘ NÃO, MỘT CỬA VÀO.
 
-     { engine: "…",            // tên bộ suy luận, hiện lên dưới nút bấm
-       doan:   ["đoạn 1", …],  // HTML đã an toàn, mỗi phần tử là một đoạn văn
-       thieu:  ["P/E", …] }    // những ô còn trống, để nhắc người dùng
+   generateLocalAIAnalysis(metrics) là ranh giới duy nhất giữa giao diện và bộ
+   suy luận. Nó luôn trả về một hình dạng cố định:
 
-   Bộ luật bên dưới KHÔNG chấm điểm lại. Nó chỉ đọc kết quả của scoreScreen() —
-   nguồn sự thật duy nhất, gồm cả ma trận ngân hàng và toàn bộ cờ đỏ — rồi diễn
-   giải thành lời. Nhờ vậy hai chỗ không bao giờ nói vênh nhau. */
+       { engine, doan:[…], thieu:[…] }
 
-/* Máy có chạy nổi mô hình trong trình duyệt không. Chỉ để hiện trạng thái. */
-function aiKhaNang(){
-  const gpu = typeof navigator !== "undefined" && "gpu" in navigator;
-  return {webgpu:gpu, nhan: gpu ? "Máy này có WebGPU — sẵn sàng cho mô hình chạy nội bộ."
-                                : "Máy này chưa bật WebGPU. Bộ luật nội bộ vẫn chạy bình thường."};
+   Bên trong nó chọn một trong hai đường:
+
+     · Chưa kích hoạt mô hình, hoặc mô hình hỏng, hoặc máy không có WebGPU
+       → phanTichTheoLuat(): bộ luật đọc thẳng kết quả scoreScreen(). Luôn chạy
+         được, kể cả offline, kể cả trên máy yếu. Đây là đường mặc định.
+
+     · Đã kích hoạt và nạp xong mô hình
+       → phanTichBangLLM(): đưa toàn bộ điểm số, chế độ ngành và danh sách cờ đỏ
+         vào mô hình dưới dạng một bản mô tả có cấu trúc, xin lại đúng ba câu về
+         những rủi ro định giá đang bị che khuất. Phần bộ luật vẫn được ghép vào
+         sau để người dùng không mất thông tin nào.
+
+   KHÔNG BAO GIỜ để mô hình chấm điểm lại. Điểm số và cờ đỏ chỉ có một nguồn duy
+   nhất là scoreScreen(). Mô hình chỉ được diễn giải, không được tính. Nhờ vậy
+   nó không thể nói vênh với những con số hiện ngay bên trên nó. */
+
+const WEBLLM_URL = "https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.84/lib/index.js";
+
+/* Dung lượng tải thật, đã đo bằng cách cộng ndarray-cache.json của từng kho trên
+   Hugging Face ngày 31/08/2026 — KHÔNG phải vram_required_MB mà WebLLM khai báo
+   (số đó là bộ nhớ đồ hoạ lúc chạy, luôn lớn hơn khá nhiều). */
+const AI_MODELS = [
+  {id:"Qwen2.5-0.5B-Instruct-q4f16_1-MLC", ten:"Qwen2.5 · 0,5B", mb:265, vram:945,
+   ghi:"Nhẹ nhất, chạy được cả trên điện thoại đời mới. Tiếng Việt ở mức đủ hiểu."},
+  {id:"Llama-3.2-1B-Instruct-q4f16_1-MLC", ten:"Llama 3.2 · 1B",  mb:663, vram:879,
+   ghi:"Của Meta. Câu cú gọn hơn, tiếng Việt trung bình."},
+  {id:"Qwen2.5-1.5B-Instruct-q4f16_1-MLC", ten:"Qwen2.5 · 1,5B", mb:828, vram:1629,
+   ghi:"Tiếng Việt khá hơn hẳn. Cần máy tính có card đồ hoạ rời hoặc máy Apple silicon."}
+];
+
+const LLM = {
+  trangThai: "chua",   // chua · dangTai · san · hong
+  engine: null,
+  worker: null,        // luồng phụ chạy mô hình, xem ai-worker.js
+  modelId: AI_MODELS[0].id,
+  tienDo: 0,
+  nhan: "",
+  loi: null,
+  daCo: false          // mô hình đã nằm sẵn trong bộ nhớ trình duyệt chưa
+};
+
+/* Máy có chạy nổi mô hình không. requestAdapter() mới là câu trả lời thật —
+   navigator.gpu tồn tại không có nghĩa là có card dùng được. */
+async function aiKhaNang(){
+  /* Worker kiểu module phải được phục vụ qua http/https. Mở bằng cách nhấp đúp
+     tệp (file://) thì không tạo được worker, nên đừng mời người dùng bật mô hình
+     rồi mới báo hỏng — nói trước cho gọn. Bộ luật vẫn chạy đầy đủ ở chế độ này. */
+  if(location.protocol === "file:")
+    return {ok:false, nhan:"Đang mở bằng file:// nên không bật được mô hình ngôn ngữ. Bản trên web bật được; ở đây bộ luật nội bộ vẫn chạy đầy đủ."};
+  if(!("gpu" in navigator))
+    return {ok:false, nhan:"Trình duyệt này không có WebGPU nên không chạy được mô hình nội bộ. Bộ luật vẫn hoạt động đầy đủ."};
+  try{
+    const ad = await navigator.gpu.requestAdapter();
+    if(!ad) return {ok:false, nhan:"Trình duyệt có WebGPU nhưng không tìm thấy card đồ hoạ dùng được. Bộ luật vẫn hoạt động đầy đủ."};
+    return {ok:true, nhan:"Máy này chạy được mô hình nội bộ."};
+  }catch(e){
+    return {ok:false, nhan:"Không kiểm tra được WebGPU. Bộ luật vẫn hoạt động đầy đủ."};
+  }
 }
 
+const aiModel = id => AI_MODELS.find(m => m.id === id) || AI_MODELS[0];
+
+/* Mô hình đã tải rồi thì lần sau nạp lại rất nhanh và KHÔNG tốn thêm mạng.
+   Phân biệt hai việc này là điểm mấu chốt của trải nghiệm: chỉ lần đầu mới phải
+   hỏi xin phép tải, những lần sau chỉ là nạp từ máy ra.
+
+   Cố tình KHÔNG dùng hasModelInCache() của WebLLM ở đây, dù nó có sẵn: gọi hàm đó
+   bắt buộc phải import thư viện, mà thư viện nặng 6,5 MB. Hàm này chạy mỗi lần mở
+   app, nên làm vậy là bắt mọi người tải 6,5 MB chỉ để trả lời một câu hỏi có/không
+   — kể cả người không bao giờ bật trợ lý AI. Soi thẳng Cache API thì không tốn
+   một byte mạng nào.
+
+   Không chắc thì trả về false, tức là app sẽ hỏi lại trước khi tải. Sai theo hướng
+   hỏi thừa một lần, không bao giờ sai theo hướng lặng lẽ tải mấy trăm MB. */
+async function aiDaTaiChua(id){
+  try{
+    if(!("caches" in window)) return false;
+    for(const ten of await caches.keys()){
+      if(!/webllm|mlc/i.test(ten)) continue;
+      const ds = await (await caches.open(ten)).keys();
+      if(ds.some(r => r.url.includes(id))) return true;
+    }
+    return false;
+  }catch(e){ return false; }
+}
+
+async function napWebLLM(id, khongHoi){
+  const m = aiModel(id);
+  LLM.modelId = id; LLM.trangThai = "dangTai"; LLM.tienDo = 0; LLM.loi = null;
+  LLM.nhan = khongHoi ? "Đang nạp mô hình từ máy bạn…" : "Đang tải mô hình…";
+  renderAIBox();
+
+  try{
+    const {CreateWebWorkerMLCEngine} = await import(WEBLLM_URL);
+    /* Chạy trong luồng phụ, KHÔNG phải luồng chính.
+
+       Bản đầu dùng CreateMLCEngine() ngay trên luồng chính. Chạy thì đúng, nhưng
+       đo thực tế: suốt lúc sinh chữ cả tab đứng hình hàng chục giây — cuộn không
+       được, bấm không được. Đưa động cơ sang worker thì giao diện vẫn mượt, thanh
+       tiến độ vẫn nhúc nhích, và người dùng vẫn bấm được sang tab khác.
+       Xem ai-worker.js. */
+    const worker = new Worker("./ai-worker.js", {type:"module"});
+    LLM.worker = worker;
+    LLM.engine = await CreateWebWorkerMLCEngine(worker, id, {
+      initProgressCallback: p => {
+        LLM.tienDo = Math.max(0, Math.min(1, p.progress || 0));
+        LLM.nhan = p.text || "";
+        renderAIBox();
+      }
+    });
+    LLM.trangThai = "san";
+    LLM.daCo = true;
+    LLM.nhan = "";
+    S.ai.model = id; S.ai.daBat = true; save();
+    toast(`Đã sẵn sàng: ${m.ten}. Từ giờ mọi phân tích chạy hoàn toàn trong máy bạn.`);
+  }catch(e){
+    LLM.trangThai = "hong";
+    LLM.engine = null;
+    try{ if(LLM.worker) LLM.worker.terminate(); }catch(_){}
+    LLM.worker = null;
+    LLM.loi = String(e && e.message || e).slice(0, 200);
+    toast("Không nạp được mô hình. Bộ luật nội bộ vẫn chạy bình thường.");
+  }
+  renderAIBox();
+}
+
+async function xoaMoHinh(){
+  try{
+    const {deleteModelAllInfoInCache} = await import(WEBLLM_URL);
+    await deleteModelAllInfoInCache(LLM.modelId);
+  }catch(e){ /* không xoá được thì thôi, không làm app chết */ }
+  try{ if(LLM.engine && LLM.engine.unload) await LLM.engine.unload(); }catch(e){}
+  try{ if(LLM.worker) LLM.worker.terminate(); }catch(e){}
+  LLM.engine = null; LLM.worker = null;
+  LLM.trangThai = "chua"; LLM.daCo = false; LLM.tienDo = 0;
+  S.ai.daBat = false; save();
+  toast("Đã xoá mô hình khỏi máy. Bộ luật nội bộ vẫn chạy như thường.");
+  renderAIBox();
+}
+
+/* ---------- hộp xin phép ----------
+   Tải vài trăm MB về máy người khác là việc phải hỏi trước, không phải việc lặng
+   lẽ làm rồi báo sau. Hộp này nói thẳng: tải bao nhiêu, tải từ đâu, và vì sao nó
+   vẫn giữ đúng lời hứa riêng tư của app. */
+function moHopXacNhan(){
+  const m = aiModel($("#ai-chon").value);
+  $("#ai-hoi-ten").textContent = m.ten;
+  $("#ai-hoi-mb").textContent = m.mb.toLocaleString("vi-VN") + " MB";
+  $("#ai-hoi-vram").textContent = m.vram.toLocaleString("vi-VN") + " MB";
+  $("#ai-hoi-ghi").textContent = m.ghi;
+  const d = $("#ai-hoi");
+  if(d.showModal) d.showModal(); else d.setAttribute("open","");
+}
+
+/* ---------- đường 2: mô hình ---------- */
+/* Mô tả có cấu trúc. Cố tình viết dưới dạng nhãn — giá trị: mô hình nhỏ bám theo
+   khuôn mẫu tốt hơn nhiều so với khi đọc văn xuôi. */
+function aiMoTa(metrics){
+  const {v, m, ey, flags, scr, BANK, thieu} = metrics;
+  const d = [];
+  d.push("NGÀNH: " + (BANK ? "ngân hàng" : "doanh nghiệp thường"));
+  d.push("MÃ: " + (scr.ticker || "chưa đặt tên"));
+  d.push("ĐIỂM GIÁ TRỊ: " + (v.pct === null ? "chưa đủ số" : `${v.got}/${v.max} (${Math.round(v.pct)}%)`));
+  d.push("ĐIỂM ĐỘNG LƯỢNG: " + (m.pct === null ? "chưa đủ số" : `${m.got}/${m.max} (${Math.round(m.pct)}%)`));
+
+  const so = [];
+  const day = (k, nhan, hau) => { if(scHas(scr[k])) so.push(`${nhan} ${scr[k]}${hau || ""}`); };
+  day("cap","vốn hoá"," tỷ"); day("pe","P/E"); day("pb","P/B"); day("roe","ROE","%");
+  if(BANK){ day("car","CAR","%"); day("npl","nợ xấu","%"); day("pcr","bao phủ nợ xấu","%"); }
+  else day("de","nợ vay trên vốn chủ"," lần");
+  day("froom","room ngoại còn lại","%"); day("chg12","đà giá 12 tháng","%");
+  day("deposit","lãi tiết kiệm","%");
+  d.push("SỐ LIỆU: " + (so.length ? so.join(" · ") : "chưa nhập gì"));
+  if(ey !== null) d.push("LỢI SUẤT LỢI NHUẬN (1/PE): " + ey.toFixed(1) + "%");
+  d.push("Ô CHƯA NHẬP: " + (thieu.length ? thieu.join(" · ") : "không có"));
+
+  /* Chỉ lấy CÂU ĐẦU của mỗi cờ đỏ, và có trần số lượng.
+     Nguyên văn các cờ đỏ dài cỡ 1.500 chữ. Nhồi hết vào thì mô hình 0,5B vừa chạy
+     chậm (nạp prompt tốn hơn cả sinh chữ), vừa có xu hướng chép lại nguyên si
+     thay vì tự viết. Câu đầu đã đủ để nó nắm được vấn đề. */
+  const cauDau = s => {
+    const t = String(s).replace(/<[^>]+>/g, "").trim();
+    const m = t.match(/^[^.!?]+[.!?]/);
+    return (m ? m[0] : t).trim();
+  };
+  const crit = flags.filter(f => f[0] === "crit").map(f => cauDau(f[1])).slice(0, 4);
+  const warn = flags.filter(f => f[0] === "warn").map(f => cauDau(f[1])).slice(0, 2);
+  d.push("CẢNH BÁO NGHIÊM TRỌNG: " + (crit.length ? crit.join(" ") : "không có"));
+  d.push("CẢNH BÁO NHẸ: " + (warn.length ? warn.join(" ") : "không có"));
+
+  /* Trả về MỘT DÒNG, không xuống dòng, không gạch đầu dòng.
+
+     Đo được: cùng một động cơ, prompt ngắn một dòng trả lời trong 6–9 giây, còn
+     prompt dài nhiều dòng có danh sách gạch đầu dòng thì treo quá 70 giây không
+     trả về gì. Chưa lần ra được nguyên nhân trong thư viện, nhưng hình dạng prompt
+     là thứ ta điều khiển được, nên ép nó về dạng chạy tốt. Bên gọi còn có thêm
+     hàng rào thời gian, xem goiMoHinh(). */
+  return d.join(" | ").replace(/\s+/g, " ").trim();
+}
+
+const AI_LUAT = [
+  "Bạn viết tiếng Việt cho người đọc phổ thông, giọng bình tĩnh.",
+  "Nhiệm vụ duy nhất: nêu những RỦI RO ĐỊNH GIÁ ĐANG BỊ CHE KHUẤT phía sau các con số được cung cấp.",
+  "BẮT BUỘC: đúng ba câu văn xuôi liền mạch, trong một đoạn duy nhất.",
+  "CẤM viết bất kỳ chữ số nào, cấm viết tỷ lệ phần trăm, cấm viết phân số kiểu 4/14, cấm chấm điểm lại, cấm lặp lại số liệu đã cho.",
+  "CẤM gạch đầu dòng, đánh số thứ tự, tiêu đề, dấu sao, in đậm, xuống dòng.",
+  "CẤM khuyên mua, bán hay nắm giữ. Cấm dự báo giá.",
+  "Hãy diễn giải Ý NGHĨA của tình trạng đó bằng lời, đừng nhắc lại dữ liệu.",
+  "Ví dụ đúng về hình dạng câu trả lời (nội dung chỉ để học cách viết):",
+  "Điểm yếu lớn nhất nằm ở chỗ bảng điểm không nhìn thấy chất lượng tài sản thật đằng sau con số lợi nhuận. Mức định giá rẻ ở đây nhiều khả năng phản ánh nghi ngờ của thị trường hơn là một cơ hội bị bỏ quên. Nếu luận điểm của bạn dựa vào một câu chuyện tăng trưởng, hãy tự hỏi ai đang đứng phía bên kia giao dịch và họ biết điều gì mà bạn chưa biết."
+].join(" ");
+
+/* Dọn về ba câu văn xuôi. Mô hình nhỏ rất hay viết lố, thêm tiêu đề, hoặc bung
+   ra danh sách markdown — chặn ở đây thay vì tin vào lời dặn trong prompt. */
+function baCau(s){
+  let t = String(s || "");
+  t = t.replace(/```[\s\S]*?```/g, " ");        // khối mã
+  t = t.replace(/[*_#`>]+/g, " ");               // dấu markdown
+  t = t.replace(/^\s*\d+[.)]\s+/gm, " ");       // đánh số thứ tự đầu dòng
+  t = t.replace(/^\s*[-\u2013\u2014]\s+/gm, " "); // gạch đầu dòng
+  t = t.replace(/\s+/g, " ").trim();
+  t = t.replace(/^(trả lời|đáp án|nhận xét|phân tích|kết luận)\s*[:\uff1a-]\s*/i, "");
+  const cau = t.match(/[^.!?\u2026]+[.!?\u2026]+/g);
+  // M\u1ed7i m\u1ea3nh c\u1eaft ra c\u00f2n d\u00ednh kho\u1ea3ng tr\u1eafng \u0111\u1ea7u c\u00e2u; kh\u00f4ng trim th\u00ec gh\u00e9p l\u1ea1i th\u00e0nh
+  // hai d\u1ea5u c\u00e1ch gi\u1eefa c\u00e1c c\u00e2u \u2014 tr\u00f4ng r\u1ea5t nghi\u1ec7p d\u01b0 trong m\u1ed9t \u0111o\u1ea1n v\u0103n xu\u00f4i.
+  return (cau ? cau.slice(0, 3).map(c => c.trim()).join(" ") : t).trim();
+}
+
+/* HÀNG RÀO CUỐI — phần quan trọng nhất của cả tính năng.
+
+   Trong lần chạy thử đầu tiên, mô hình 0,5B đã bịa ra một dòng điểm "4/13 (35%)"
+   không hề tồn tại ở bất cứ đâu trong dữ liệu đưa vào. Một công cụ tài chính in ra
+   con số bịa thì tệ hơn hẳn một công cụ không có AI. Nguyên tắc ở đây:
+   THÀ KHÔNG HIỆN GÌ CÒN HƠN HIỆN SỐ SAI.
+
+   Nên mọi dấu hiệu của việc chép điểm hoặc bịa số đều bị loại thẳng, và app quay
+   về bộ luật — nơi từng con số đều do scoreScreen() tính ra. */
+function hopLeCau(t){
+  if(!t || t.length < 60) return false;             // chưa thành ba câu
+  if(/[*#`]/.test(t)) return false;                 // sót markdown
+
+  /* LUẬT TUYỆT ĐỐI: không một chữ số nào.
+
+     Ban đầu chỗ này chỉ chặn vài dạng cụ thể — phân số "4/14", tỷ lệ phần trăm.
+     Lọc kiểu đó thua ngay ở lần chạy thử thứ hai: mô hình chép lại "vốn 220.563
+     tỷ, P/E là 11.95" — không dính mẫu nào cả, mà dấu chấm thập phân còn làm vỡ
+     luôn phép tách câu, đẻ ra một câu cụt "P/B là 0.".
+
+     Nên đổi sang một luật duy nhất, đúng bằng điều prompt đã dặn: mô hình KHÔNG
+     ĐƯỢC viết số. Mọi con số trong app đều thuộc về scoreScreen(); mô hình chỉ
+     được diễn giải bằng lời. Một chữ số xuất hiện ở đây thì hoặc là chép lại,
+     hoặc là bịa ra — cả hai đều không được phép hiện lên. Luật này còn có cái lợi
+     là kiểm chứng được bằng mắt trong một giây. */
+  if(/[0-9]/.test(t)) return false;
+  const soCau = (t.match(/[.!?\u2026]/g) || []).length;
+  return soCau >= 2;
+}
+
+/* Hàng rào thời gian. BẮT BUỘC PHẢI CÓ.
+
+   Trong lúc thử, đã gặp trường hợp lời gọi sinh chữ không bao giờ trả về: nút kẹt
+   ở "Mô hình đang viết…" vô hạn, không lỗi, không gì cả. Một tính năng phụ trợ mà
+   treo vĩnh viễn thì tệ hơn là không có nó.
+
+   Nên mọi lời gọi đều chạy đua với đồng hồ. Quá hạn thì coi như hỏng, và người
+   dùng nhận bộ luật nội bộ — thứ luôn có sẵn ngay lập tức. Không bao giờ để giao
+   diện chờ một thứ có thể không bao giờ tới. */
+const AI_HAN_GIAY = 45;
+
+async function goiMoHinh(metrics, nghiemNgat){
+  const chay = LLM.engine.chat.completions.create({
+    messages: [
+      {role:"system", content: AI_LUAT + (nghiemNgat
+        ? " LẦN TRƯỚC BẠN ĐÃ SAI: bạn viết ra chữ số hoặc dùng gạch đầu dòng. Lần này tuyệt đối không có một ký tự số nào trong câu trả lời."
+        : "")},
+      {role:"user", content: aiMoTa(metrics)}
+    ],
+    temperature: nghiemNgat ? 0.2 : 0.35,
+    max_tokens: 220
+  });
+  let dongHo;
+  const hetGio = new Promise((_, tuChoi) => {
+    dongHo = setTimeout(() => tuChoi(new Error("Mô hình quá " + AI_HAN_GIAY + " giây chưa trả lời")),
+                        AI_HAN_GIAY * 1000);
+  });
+  try{
+    const res = await Promise.race([chay, hetGio]);
+    return baCau(res && res.choices && res.choices[0] && res.choices[0].message
+                 ? res.choices[0].message.content : "");
+  } finally {
+    clearTimeout(dongHo);
+  }
+}
+
+async function phanTichBangLLM(metrics){
+  /* Lần đầu quá hạn thì BỎ LUÔN, không thử lại: máy đã tỏ ra quá chậm, thử tiếp
+     chỉ bắt người dùng chờ thêm ngần ấy giây nữa để rồi cũng hỏng. Chỉ thử lại
+     khi mô hình có trả lời nhưng viết sai hình dạng — lúc đó nhắc lại thường ăn. */
+  const cau = await goiMoHinh(metrics, false);   // quá hạn thì ném, thoát thẳng ra ngoài
+  if(hopLeCau(cau)) return cau;
+
+  const lai = await goiMoHinh(metrics, true);    // nhắc lại một lần, chặt hơn
+  if(hopLeCau(lai)) return lai;
+  throw new Error("Mô hình không viết được đoạn dùng được");
+}
+
+/* ---------- cửa vào duy nhất ---------- */
 async function generateLocalAIAnalysis(metrics){
-  /* ---- CHỖ CẮM WEBLLM ----
-     Khi nạp WebLLM, thay đúng khối này và giữ nguyên hình dạng trả về:
+  const luat = phanTichTheoLuat(metrics);
 
-       if(window.CreateMLCEngine && metrics.dungMoHinh){
-         const engine = await CreateMLCEngine("Llama-3.2-3B-Instruct-q4f16_1-MLC");
-         const res = await engine.chat.completions.create({
-           messages:[{role:"system", content:AI_SYSTEM}, {role:"user", content:aiMoTa(metrics)}]
-         });
-         return {engine:"Llama-3.2-3B · WebGPU", doan:[esc(res.choices[0].message.content)], thieu:metrics.thieu};
-       }
+  if(LLM.trangThai !== "san" || !LLM.engine) return luat;
 
-     Lưu ý trước khi bật: mô hình nặng vài trăm MB tới vài GB, tải từ CDN của
-     HuggingFace. Việc đó phá vỡ lời hứa "không gọi ra ngoài" đang in trong tab
-     Dữ liệu, nên phải hỏi người dùng trước và sửa lại đoạn cam kết đó cho đúng. */
+  try{
+    const cau = await phanTichBangLLM(metrics);
+    const m = aiModel(LLM.modelId);
+    return {
+      engine: m.ten + " · WebGPU · chạy hoàn toàn trong máy bạn",
+      /* Lời của mô hình đứng trước, đánh dấu rõ ràng là do mô hình viết.
+         esc() bắt buộc: đây là chữ do mô hình sinh ra, không được tin. */
+      doan: [
+        `<strong>Ba câu về rủi ro đang bị che khuất</strong> — do mô hình viết, không phải bộ luật: ${esc(cau)}`,
+        ...luat.doan
+      ],
+      thieu: luat.thieu
+    };
+  }catch(e){
+    /* Mô hình hỏng, hoặc viết ra thứ không dùng được, thì rơi về bộ luật. Nói
+       thẳng chuyện đó chứ không im lặng: người dùng có quyền biết đoạn nào do mô
+       hình viết và đoạn nào không. */
+    return {...luat,
+      engine: aiModel(LLM.modelId).ten + " không viết được đoạn dùng được lần này — bên dưới là bộ luật nội bộ"};
+  }
+}
 
+/* ---------- đường 1: bộ luật ----------
+   Không chấm điểm lại. Chỉ đọc kết quả scoreScreen() rồi diễn giải thành lời,
+   nên hai chỗ không bao giờ nói vênh nhau. */
+function phanTichTheoLuat(metrics){
   const {v, m, ey, flags, scr, BANK} = metrics;
   const doan = [], thieu = metrics.thieu.slice();
   const pc = x => x === null ? null : Math.round(x);
@@ -4514,14 +4872,89 @@ async function generateLocalAIAnalysis(metrics){
   return {engine:"Bộ luật nội bộ · chạy hoàn toàn trong máy bạn", doan, thieu};
 }
 
+/* ---------- giao diện ô AI ---------- */
 function renderAIBox(){
-  const kn = aiKhaNang();
-  $("#ai-engine").innerHTML = kn.nhan + " Không có số liệu nào rời khỏi máy — kể cả khi bạn bấm nút.";
+  const st = $("#ai-status"), nut = $("#ai-activate"), chon = $("#ai-chon");
+  const m = aiModel(LLM.modelId);
+  const cham = (mau, chu) =>
+    `<span style="display:inline-flex;align-items:center;gap:7px">
+       <span style="width:8px;height:8px;border-radius:50%;background:${mau};flex:none"></span>${chu}</span>`;
+
+  if(LLM.trangThai === "dangTai"){
+    const pc = Math.round(LLM.tienDo*100);
+    st.innerHTML = cham("var(--warn)", `Đang chuẩn bị ${esc(m.ten)} — ${pc}%`) +
+      `<div class="meter" style="margin-top:8px"><i style="width:${pc}%;background:var(--warn)"></i></div>` +
+      (LLM.nhan ? `<div class="s" style="margin-top:6px">${esc(LLM.nhan).slice(0,160)}</div>` : "");
+    nut.disabled = true; nut.textContent = "Đang tải…";
+    chon.disabled = true;
+  } else if(LLM.trangThai === "san"){
+    st.innerHTML = cham("var(--good)", `<strong>${esc(m.ten)}</strong> đã sẵn sàng — mọi phép tính chạy trên card đồ hoạ của bạn, không có gì gửi đi đâu.`);
+    nut.disabled = false; nut.textContent = "Xoá mô hình khỏi máy";
+    nut.classList.remove("primary"); nut.classList.add("danger");
+    chon.disabled = true;
+  } else if(LLM.trangThai === "hong"){
+    st.innerHTML = cham("var(--crit)", "Không nạp được mô hình. Bộ luật nội bộ vẫn chạy đầy đủ.") +
+      (LLM.loi ? `<div class="s" style="margin-top:6px">${esc(LLM.loi)}</div>` : "");
+    nut.disabled = false; nut.textContent = "Thử lại";
+    nut.classList.add("primary"); nut.classList.remove("danger");
+    chon.disabled = false;
+  } else {
+    st.innerHTML = cham("var(--ink3)", LLM.daCo
+      ? `Mô hình <strong>${esc(m.ten)}</strong> đã có sẵn trong máy — nạp lại không tốn thêm mạng.`
+      : "Chưa kích hoạt. Đang chạy bằng bộ luật nội bộ.") +
+      `<div class="s" style="margin-top:6px">${esc(AI_KHA_NANG.nhan || "")}</div>`;
+    nut.disabled = !AI_KHA_NANG.ok;
+    nut.textContent = LLM.daCo
+      ? "Nạp mô hình đã tải (không tốn mạng)"
+      : `Kích hoạt Trợ lý AI (Tải mô hình ~${m.mb} MB)`;
+    nut.classList.add("primary"); nut.classList.remove("danger");
+    chon.disabled = false;
+  }
 }
+
+/* Kết quả dò WebGPU, dò một lần lúc khởi động rồi dùng lại. */
+let AI_KHA_NANG = {ok:false, nhan:"Đang kiểm tra khả năng của máy…"};
+
+async function khoiDongAI(){
+  const chon = $("#ai-chon");
+  chon.innerHTML = AI_MODELS.map(m =>
+    `<option value="${esc(m.id)}">${esc(m.ten)} — ${m.mb} MB</option>`).join("");
+  if(S.ai.model && AI_MODELS.some(m => m.id === S.ai.model)) LLM.modelId = S.ai.model;
+  chon.value = LLM.modelId;
+
+  AI_KHA_NANG = await aiKhaNang();
+  renderAIBox();
+  if(!AI_KHA_NANG.ok) return;
+
+  /* Mô hình đã nằm sẵn trong máy thì báo cho người dùng biết, nhưng KHÔNG tự nạp:
+     nạp là chiếm vài trăm MB bộ nhớ đồ hoạ, phải do người dùng quyết. */
+  LLM.daCo = await aiDaTaiChua(LLM.modelId);
+  renderAIBox();
+}
+
+$("#ai-chon").addEventListener("change", async e => {
+  LLM.modelId = e.target.value;
+  S.ai.model = LLM.modelId; save();
+  LLM.daCo = await aiDaTaiChua(LLM.modelId);
+  renderAIBox();
+});
+
+$("#ai-activate").addEventListener("click", () => {
+  if(LLM.trangThai === "san"){ xoaMoHinh(); return; }
+  if(LLM.daCo){ napWebLLM(LLM.modelId, true); return; }   // đã có sẵn, không phải hỏi lại
+  moHopXacNhan();
+});
+
+$("#ai-hoi-dong").addEventListener("click", () => $("#ai-hoi").close());
+$("#ai-hoi-ok").addEventListener("click", () => {
+  $("#ai-hoi").close();
+  napWebLLM($("#ai-chon").value, false);
+});
 
 $("#ai-run").addEventListener("click", async () => {
   const btn = $("#ai-run"), out = $("#ai-out");
-  btn.disabled = true; btn.textContent = "Đang đọc…";
+  btn.disabled = true;
+  btn.textContent = LLM.trangThai === "san" ? "Mô hình đang viết…" : "Đang đọc…";
   try{
     const r = scoreScreen(), p = S.scr;
     /* ô nào chưa nhập — lấy đúng theo ngành đang chọn */
@@ -4643,7 +5076,7 @@ function renderAll(){
   renderScreen();
   renderMap(); renderKB(); renderLevels();
   renderSrcs(); renderLessons(); renderIkigai(); buildDcaFields(); buildNhaFields();
-  buildLkFields(); renderLaiKep(); renderAIBox();
+  buildLkFields(); renderLaiKep(); khoiDongAI();
   showTpane(); renderTuSoi();
   $("#tudo-so").value = S.tuDo.so; $("#tudo-ghi").value = S.tuDo.ghi; $("#tiec-box").value = S.tiec;
   renderNumbers(); drawChart();

@@ -4,13 +4,14 @@
 
    ĐỔI PHIÊN BẢN mỗi lần sửa app, nếu không điện thoại sẽ giữ mãi bản cũ.
 */
-const PHIEN_BAN = "la-ban-v1.2.0";
+const PHIEN_BAN = "la-ban-v1.3.0";
 const CACHE_SHELL = PHIEN_BAN + "-shell";
 const CACHE_FONT = PHIEN_BAN + "-font";
 
 const SHELL = [
   "./",
   "./index.html",
+  "./ai-worker.js",
   "./manifest.webmanifest",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
@@ -21,10 +22,16 @@ const SHELL = [
 /* Google Fonts là host ngoài duy nhất app dùng — cache lại để offline vẫn đúng chữ. */
 const HOST_FONT = ["fonts.googleapis.com", "fonts.gstatic.com"];
 
-/* Chart.js tải từ jsDelivr cho tab "Lộ trình Lãi kép". Cùng cách xử lý như font:
-   lần đầu online thì tải và giữ lại, từ đó offline vẫn vẽ được biểu đồ. */
+/* Chart.js và thư viện WebLLM đều tải từ jsDelivr. Cùng cách xử lý như font:
+   lần đầu online thì tải và giữ lại, từ đó offline vẫn dùng được. */
 const HOST_CDN = ["cdn.jsdelivr.net"];
 const CACHE_CDN = PHIEN_BAN + "-cdn";
+
+/* Trọng số mô hình (Hugging Face) và tệp nhân WebGPU (GitHub) CỐ Ý không đụng tới.
+   Chúng nặng vài trăm MB và WebLLM đã tự quản lý kho riêng của nó; service worker
+   xen vào chỉ tổ nhân đôi dung lượng trên máy người dùng. Nhánh khác nguồn ở dưới
+   sẽ tự bỏ qua chúng — liệt kê ở đây để người đọc sau biết là có chủ ý. */
+const HOST_MO_HINH = ["huggingface.co", "cdn-lfs.hf.co", "cdn-lfs-us-1.hf.co", "raw.githubusercontent.com"];
 
 self.addEventListener("install", event => {
   event.waitUntil((async () => {
@@ -44,6 +51,9 @@ self.addEventListener("activate", event => {
   event.waitUntil((async () => {
     try {
       const ten = await caches.keys();
+      // CHỈ xoá kho của chính app này. Kho của WebLLM tên khác hẳn ("webllm/…")
+      // nên nâng phiên bản app KHÔNG làm người dùng mất mô hình vài trăm MB đã tải.
+      // Đây là lý do bộ lọc phải bám vào tiền tố "la-ban-", đừng nới rộng nó ra.
       await Promise.all(ten
         .filter(k => k.startsWith("la-ban-") && !k.startsWith(PHIEN_BAN))
         .map(k => caches.delete(k)));

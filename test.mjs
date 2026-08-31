@@ -41,6 +41,8 @@ const NAMES = [
   "monthsTo", "yrs", "money", "niceMax",
   // A1-5 · DCA
   "dca", "laiKep",
+  // A2 · trợ lý AI nội bộ — hai hàm gác cổng cho chữ do mô hình sinh ra
+  "baCau", "hopLeCau",
   // A1-6 · mua vs thuê
   "pmt", "soSanhMuaThue", "diemHoaVon",
   // A1-1 · ngân sách 50/30/20
@@ -173,6 +175,43 @@ t("số âm bị kẹp về 0, không sinh NaN", ["laiKep"], () => {
   const r = F.laiKep(-100, -5, 10, 10);
   eq(r.von, 0); eq(r.pmt, 0); approx(r.tong, 0, 1e-9); approx(r.goc, 0, 1e-9);
   truthy(isFinite(r.boi) && isFinite(r.pcLai), "boi/pcLai không được NaN");
+});
+
+/* ============================================================
+   TRỢ LÝ AI — hai hàng rào cho chữ do mô hình sinh ra
+   ============================================================ */
+group("baCau — dọn chữ mô hình về ba câu văn xuôi");
+t("cắt còn đúng ba câu", ["baCau"], () =>
+  eq(F.baCau("Một. Hai. Ba. Bốn. Năm."), "Một. Hai. Ba."));
+t("bóc dấu markdown", ["baCau"], () =>
+  truthy(!/[*#`]/.test(F.baCau("**Đậm** và `mã` và # tiêu đề. Câu hai. Câu ba.")),
+    "không được còn ký tự markdown"));
+t("bỏ đánh số đầu dòng", ["baCau"], () =>
+  truthy(!/^\s*1\./.test(F.baCau("1. Câu một. Câu hai. Câu ba.")), "còn sót '1.'"));
+t("gộp mọi khoảng trắng thành một dòng", ["baCau"], () =>
+  truthy(!F.baCau("Câu một.\n\nCâu hai.\nCâu ba.").includes("\n"), "không được còn xuống dòng"));
+t("chuỗi rỗng không làm vỡ", ["baCau"], () => { eq(F.baCau(""), ""); eq(F.baCau(null), ""); });
+
+group("hopLeCau — hàng rào chặn mô hình bịa số");
+const DAI = "Điểm yếu lớn nhất nằm ở chỗ bảng điểm không nhìn thấy chất lượng tài sản thật. " +
+            "Mức định giá rẻ ở đây nhiều khả năng phản ánh nghi ngờ của thị trường. " +
+            "Hãy tự hỏi ai đang đứng phía bên kia giao dịch.";
+t("đoạn ba câu sạch thì hợp lệ", ["hopLeCau"], () => truthy(F.hopLeCau(DAI), "phải hợp lệ"));
+t("có bất kỳ chữ số nào cũng bị loại", ["hopLeCau"], () => {
+  truthy(!F.hopLeCau(DAI + " Nợ xấu 3,6 phần trăm."), "chữ số phải bị loại");
+  truthy(!F.hopLeCau(DAI.replace("rẻ", "rẻ 0")), "một chữ số cũng đủ để loại");
+});
+t("chặn đúng ca bịa điểm đã gặp thật", ["hopLeCau"], () =>
+  truthy(!F.hopLeCau("Giá trị dựa trên bảng điểm là 4/13 (35%). Câu hai ở đây. Câu ba ở đây nữa."),
+    "phải chặn phân số bịa 4/13"));
+t("chặn ca chép lại số liệu đã gặp thật", ["hopLeCau"], () =>
+  truthy(!F.hopLeCau("Ngân hàng đã có vốn 220.563 tỷ đồng và P/E là 11.95. Câu hai. Câu ba."),
+    "phải chặn việc chép số liệu"));
+t("quá ngắn thì loại", ["hopLeCau"], () => truthy(!F.hopLeCau("Ngắn quá."), "phải loại"));
+t("còn sót markdown thì loại", ["hopLeCau"], () =>
+  truthy(!F.hopLeCau("**" + DAI), "phải loại"));
+t("chuỗi rỗng thì loại", ["hopLeCau"], () => {
+  truthy(!F.hopLeCau(""), "rỗng phải loại"); truthy(!F.hopLeCau(null), "null phải loại");
 });
 
 /* ============================================================
