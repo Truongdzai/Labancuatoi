@@ -32,7 +32,8 @@ Bổ sung cho bộ lọc v3 (kiểm chứng 31/08/2026):
     Dòng tiền tự do ✓  báo cáo lưu chuyển tiền tệ VCI, năm gần nhất:
                        tiền thuần từ kinh doanh CỘNG chi mua sắm TSCĐ (số đã âm sẵn)
     DTKD / LNST     ✓  cùng nguồn, chia cho lợi nhuận sau thuế trong báo cáo KQKD
-    NIM ba quý      ✓  chỉ số KBS, trường net_interest_margin_nim, còn cập nhật
+    NIM ba quý      ✓  chỉ số KBS, trường net_interest_margin_nim — lấy chung
+                       một lời gọi với P/E, P/B, ROE cho đỡ chạm trần tốc độ
 
 Hai ô dòng tiền CHỈ tính cho doanh nghiệp thường. Báo cáo lưu chuyển tiền tệ của
 ngân hàng không so sánh được: cho vay ra bị ghi thành dòng tiền âm, nên một ngân
@@ -51,7 +52,7 @@ import os
 import sys
 import time
 import warnings
-from concurrent import futures
+import threading
 from datetime import datetime, timedelta, timezone
 
 warnings.filterwarnings("ignore")
@@ -98,6 +99,37 @@ def log(*a):
     print(*a, file=sys.stderr, flush=True)
 
 
+class _HetGio(Exception):
+    """Lời gọi vượt quá hạn giờ cho phép."""
+
+
+def _chay_co_han(ham, a, kw):
+    """Chạy ham(*a, **kw) trong luồng nền, ném _HetGio nếu quá hạn.
+
+    Cố ý KHÔNG dùng ThreadPoolExecutor. Bản đầu viết bằng nó và tưởng là xong,
+    nhưng `with ThreadPoolExecutor(...)` khi thoát khối sẽ gọi shutdown(wait=True)
+    — tức là ĐỢI luồng đang treo chạy xong. Hạn giờ vì thế vô tác dụng: result()
+    ném TimeoutError đúng lúc, rồi chương trình đứng ngay tại dấu ngoặc đóng.
+    Chạy thật vẫn kẹt hơn bảy phút ở mã VNM dù đã đặt hạn 90 giây.
+
+    Luồng daemon thì khác: không ai đợi nó, và nó cũng không giữ tiến trình lại
+    lúc thoát. Luồng treo cứ treo cho tới khi cả tiến trình kết thúc.
+    """
+    hop = []
+    def chay():
+        try:
+            hop.append(("ok", ham(*a, **kw)))
+        except (Exception, SystemExit) as e:      # SystemExit: vnstock hay gọi sys.exit
+            hop.append(("loi", e))
+
+    t = threading.Thread(target=chay, daemon=True)
+    t.start()
+    t.join(HAN_MOI_LOI_GOI)
+    if not hop:
+        raise _HetGio()
+    return hop[0]
+
+
 def goi(mo_ta, ham, *a, **kw):
     """Gọi một hàm lấy dữ liệu, nuốt mọi lỗi, chờ khi bị chặn, và BỎ khi treo.
 
@@ -116,15 +148,18 @@ def goi(mo_ta, ham, *a, **kw):
        đâu mà bắt. Nên mỗi lời gọi phải chạy trong luồng riêng có hạn giờ; quá
        hạn thì bỏ mã đó và đi tiếp. Một mã thiếu số còn hơn cả mẻ chết cứng, và
        trên GitHub Actions thì treo đồng nghĩa với đốt trọn timeout của job.
+       Xem _chay_co_han() để biết vì sao không dùng ThreadPoolExecutor.
     """
     for lan in range(2):
         try:
-            with futures.ThreadPoolExecutor(max_workers=1) as bom:
-                return bom.submit(ham, *a, **kw).result(timeout=HAN_MOI_LOI_GOI)
-        except futures.TimeoutError:
-            # Luồng kia có thể vẫn còn chạy; nó là daemon nên không giữ tiến trình lại.
+            ket = _chay_co_han(ham, a, kw)
+        except _HetGio:
             log("  ! %s treo quá %ds — bỏ qua" % (mo_ta, HAN_MOI_LOI_GOI))
             return None
+        try:
+            if ket[0] == "loi":
+                raise ket[1]
+            return ket[1]
         except (Exception, SystemExit) as e:
             dau = (str(e) + " " + type(e).__name__).lower()
             chan = any(k in dau for k in ("rate limit", "giới hạn", "too many", "429"))
@@ -176,8 +211,14 @@ def bang_gia(ma_list):
     return out
 
 
-def chi_so_kbs(ma):
-    """P/E, P/B, ROE của quý gần nhất — nguồn KBS còn cập nhật."""
+def chi_so_kbs(ma, lay_nim=False):
+    """P/E, P/B, ROE — và cả NIM ba quý nếu là ngân hàng. MỘT lời gọi duy nhất.
+
+    Trước đây NIM có hàm riêng, nhưng nó gọi ĐÚNG cái endpoint này lần thứ hai.
+    Nguồn miễn phí chặn tốc độ theo số lượt gọi mỗi phút, nên gọi trùng là tự làm
+    khó mình: mỗi ngân hàng tốn 4 lượt thay vì 3, và với 20 mã thì đủ để cả mẻ
+    chạy quá giờ. Lấy một lần rồi bóc cả hai thứ ra.
+    """
     from vnstock.api.financial import Finance
 
     r = Finance(symbol=ma, source="KBS").ratio(
@@ -187,13 +228,20 @@ def chi_so_kbs(ma):
     if not ky:
         return {}, None
     # KBS không trả cột theo thứ tự thời gian — xem cot_theo_thoi_gian()
-    cot = cot_theo_thoi_gian(ky)[0]
+    sach = cot_theo_thoi_gian(ky)
+    cot = sach[0]
     lay = dict(zip(r["item_id"], r[cot]))
-    return {
+    out = {
         "pe": so(lay.get("pe_ratio")),
         "pb": so(lay.get("pb_ratio")),
         "roe": so(lay.get("roe_trailling")),   # ROE bình quân 4 quý, đơn vị %
-    }, str(cot)
+    }
+    if lay_nim:
+        for i, k in enumerate(sach[:3]):
+            v = so(dict(zip(r["item_id"], r[k])).get("net_interest_margin_nim"))
+            if v is not None:
+                out[["nim", "nim1", "nim2"][i]] = v
+    return out, str(cot)
 
 
 def chi_so_ngan_hang(ma):
@@ -324,29 +372,6 @@ def cot_theo_thoi_gian(cols):
     return [c for _, c in sach]
 
 
-def nim_ba_quy(ma):
-    """NIM ba quý gần nhất — chỉ ngân hàng. Nguồn KBS còn cập nhật tới quý hiện tại."""
-    from vnstock.api.financial import Finance
-
-    r = Finance(symbol=ma, source="KBS").ratio(
-        period="quarter", lang="en", dropna=True, flatten_columns=True
-    )
-    ky = [c for c in r.columns if c not in ("item", "item_id", "item_en")]
-    if not ky:
-        return {}
-    sach = cot_theo_thoi_gian(ky)
-
-    def val(cot):
-        d = dict(zip(r["item_id"], r[cot]))
-        return so(d.get("net_interest_margin_nim"))
-
-    out = {}
-    for i, k in enumerate(sach[:3]):
-        v = val(k)
-        if v is not None:
-            out[["nim", "nim1", "nim2"][i]] = v
-    return out
-
 
 def da_gia_12_thang(ma):
     """Phần trăm thay đổi giá 12 tháng, tự tính từ lịch sử giá."""
@@ -407,7 +432,8 @@ def thu_thap(ma_list, nghi):
             "chg12": None,
         }
 
-        r = goi("chỉ số KBS " + ma, chi_so_kbs, ma)
+        # ngân hàng: lấy luôn NIM trong cùng lời gọi, khỏi tốn thêm một lượt API
+        r = goi("chỉ số KBS " + ma, chi_so_kbs, ma, la_bank)
         if r:
             d.update(r[0])
             d["kyBaoCao"] = r[1]
@@ -417,9 +443,6 @@ def thu_thap(ma_list, nghi):
             if r:
                 d.update(r[0])
                 d["kyNganHang"] = r[1]
-            nim = goi("NIM " + ma, nim_ba_quy, ma)
-            if nim:
-                d.update(nim)
         else:
             # Dòng tiền chỉ có nghĩa với doanh nghiệp thường — xem ghi chú đầu tệp.
             dt = goi("dòng tiền " + ma, dong_tien, ma)
