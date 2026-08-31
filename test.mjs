@@ -44,7 +44,7 @@ const NAMES = [
   // A2 · trợ lý AI nội bộ — hai hàm gác cổng cho chữ do mô hình sinh ra
   "baCau", "hopLeCau",
   // v3 · bộ lọc nâng cấp
-  "scoreScreen",
+  "scoreScreen", "aiMoTa",
   // A1-6 · mua vs thuê
   "pmt", "soSanhMuaThue", "diemHoaVon",
   // A1-1 · ngân sách 50/30/20
@@ -306,6 +306,47 @@ t("ô FTSE chỉ còn tối đa 1 điểm", ["scoreScreen"], () =>
 t("không còn chiếm một phần ba luồng động lượng", ["scoreScreen"], () => {
   const r = F.scoreScreen(CB({ ftse: true }));
   truthy(r.m.max === 5, "động lượng tối đa phải là 5 — nhận " + r.m.max);
+});
+
+group("aiMoTa — mô tả gửi cho mô hình không được có chữ số");
+/* Hàng rào hopLeCau cấm mô hình viết số. Nếu bản mô tả ĐƯA VÀO lại đầy số thì mô
+   hình nhỏ sẽ chép ra và trượt mọi lần — đúng thứ đã xảy ra với cả bản 0,5B lẫn
+   1,5B. Test này khoá lại điều kiện tiên quyết: đầu vào sạch số. */
+const moTa = (p, thieu) => {
+  const r = F.scoreScreen(p);
+  return F.aiMoTa({ ...r, scr: p, BANK: p.sector === "bank", thieu: thieu || [] });
+};
+t("ca ngân hàng VPB thật — không một chữ số", ["aiMoTa", "scoreScreen"], () => {
+  const s = moTa(NH({ ticker:"VPB", cap:220563, pe:11.95, pb:1.55, roe:14.04,
+                      car:null, npl:null, pcr:null, nim:1.33, nim1:1.39, nim2:1.42, chg12:-19.2 }),
+                 ["CAR","Nợ xấu","Bao phủ nợ xấu"]);
+  truthy(!/[0-9]/.test(s), "còn chữ số: " + (s.match(/[0-9].{0,25}/) || [""])[0]);
+});
+t("ca doanh nghiệp HPG thật — không một chữ số", ["aiMoTa", "scoreScreen"], () => {
+  const s = moTa(CB({ ticker:"HPG", cap:186590, pe:13.05, pb:1.69, roe:12.02,
+                      fcf:-8382, cfoni:1.12, chg12:-10 }), ["Nợ vay / Vốn chủ","Room ngoại"]);
+  truthy(!/[0-9]/.test(s), "còn chữ số: " + (s.match(/[0-9].{0,25}/) || [""])[0]);
+});
+t("bộ số bật thật nhiều cờ đỏ — vẫn không chữ số", ["aiMoTa", "scoreScreen"], () => {
+  const s = moTa(NH({ cap:5000, pe:45, pb:0.6, roe:3, car:8, npl:4.2, pcr:40,
+                      npl1:3.5, npl2:3.0, nim:1.2, nim1:1.5, nim2:1.8,
+                      froom:0.2, chg12:120, ftse:true }));
+  truthy(!/[0-9]/.test(s), "còn chữ số: " + (s.match(/[0-9].{0,25}/) || [""])[0]);
+});
+t("bỏ trống hết cũng không vỡ và không có chữ số", ["aiMoTa", "scoreScreen"], () => {
+  const s = moTa(CB({ cap:null, pe:null, pb:null, roe:null, de:null, froom:null, chg12:null, deposit:null }));
+  truthy(s.length > 20, "phải còn nội dung");
+  truthy(!/[0-9]/.test(s), "còn chữ số");
+});
+t("mô tả đủ ngắn để mô hình nhỏ không treo", ["aiMoTa", "scoreScreen"], () => {
+  const s = moTa(NH({ car:8, npl:4.2, pcr:40, npl1:3.5, npl2:3.0, nim:1.2, nim1:1.5, nim2:1.8, ftse:true }));
+  truthy(s.length < 1200, "quá dài: " + s.length + " ký tự");
+  truthy(!s.includes("\n"), "phải nằm trên một dòng");
+});
+t("vẫn nêu được biên an toàn và cờ đỏ bằng lời", ["aiMoTa", "scoreScreen"], () => {
+  const s = moTa(NH({ nim:1.33, nim1:1.39, nim2:1.42 }));
+  truthy(s.includes("BIÊN AN TOÀN"), "thiếu biên an toàn");
+  truthy(s.includes("co lại hai quý liên tiếp"), "thiếu cờ đỏ NIM");
 });
 
 group("v3 · scoreScreen chấm được bộ số bất kỳ (điều kiện của bảng xếp hạng)");

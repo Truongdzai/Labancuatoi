@@ -4927,69 +4927,115 @@ function moHopXacNhan(){
 /* ---------- đường 2: mô hình ---------- */
 /* Mô tả có cấu trúc. Cố tình viết dưới dạng nhãn — giá trị: mô hình nhỏ bám theo
    khuôn mẫu tốt hơn nhiều so với khi đọc văn xuôi. */
+/* Mô tả đưa cho mô hình — CỐ Ý KHÔNG CÓ MỘT CHỮ SỐ NÀO.
+
+   Bản trước mắc một mâu thuẫn tự gây ra: prompt cấm mô hình viết số, nhưng chính
+   phần dữ liệu lại nhồi đầy số ("vốn hoá 220563 tỷ · P/E 11.95 · CAR dưới 9%").
+   Mô hình nhỏ sinh chữ bằng cách bám theo ngữ cảnh, nên đưa số cho nó rồi cấm nó
+   viết số là đặt ra một bài không thể giải. Quan sát thật: cả bản 0,5B lẫn bản
+   1,5B đều trượt hàng rào, lần nào cũng vậy.
+
+   Sửa ở gốc: không đưa số nữa. Mọi mức độ quy về CHỮ — dày, mỏng, âm, quanh mặt
+   bằng. Mô hình mất khả năng chép số vì không còn số nào để chép, mà vẫn nắm đủ
+   ý để diễn giải. Con số vẫn hiện đầy đủ ngay phía trên, do scoreScreen() tính
+   và do JS in ra — chỗ duy nhất được phép sinh ra chúng. */
 function aiMoTa(metrics){
   const {v, m, ey, flags, scr, BANK, thieu} = metrics;
   const d = [];
+
+  /* Quy một tỷ lệ phần trăm về ba bậc bằng lời. */
+  const bac = (pct, cao, giua, thap) =>
+    pct === null ? "chưa đủ số" : pct >= 60 ? cao : pct >= 35 ? giua : thap;
+
   d.push("NGÀNH: " + (BANK ? "ngân hàng" : "doanh nghiệp thường"));
-  d.push("MÃ: " + (scr.ticker || "chưa đặt tên"));
-  d.push("ĐIỂM GIÁ TRỊ: " + (v.pct === null ? "chưa đủ số" : `${v.got}/${v.max} (${Math.round(v.pct)}%)`));
-  d.push("ĐIỂM ĐỘNG LƯỢNG: " + (m.pct === null ? "chưa đủ số" : `${m.got}/${m.max} (${Math.round(m.pct)}%)`));
+  d.push("TÍN HIỆU GIÁ TRỊ: " + bac(v.pct, "mạnh", "trung bình", "yếu"));
+  d.push("TÍN HIỆU ĐỘNG LƯỢNG: " + bac(m.pct, "mạnh", "trung bình", "yếu"));
 
-  const so = [];
-  const day = (k, nhan, hau) => { if(scHas(scr[k])) so.push(`${nhan} ${scr[k]}${hau || ""}`); };
-  day("cap","vốn hoá"," tỷ"); day("pe","P/E"); day("pb","P/B"); day("roe","ROE","%");
-  if(BANK){ day("car","CAR","%"); day("npl","nợ xấu","%"); day("pcr","bao phủ nợ xấu","%"); }
-  else day("de","nợ vay trên vốn chủ"," lần");
-  day("froom","room ngoại còn lại","%"); day("chg12","đà giá 12 tháng","%");
-  day("deposit","lãi tiết kiệm","%");
-  d.push("SỐ LIỆU: " + (so.length ? so.join(" · ") : "chưa nhập gì"));
-  if(ey !== null) d.push("LỢI SUẤT LỢI NHUẬN (1/PE): " + ey.toFixed(1) + "%");
-
-  /* Biên an toàn ĐƯA VÀO như một dữ kiện đã tính sẵn, không phải bài toán giao cho
-     mô hình. Đây là điểm cốt lõi trong thiết kế: mô hình 0,5B từng bịa ra dòng điểm
-     "4/13 (35%)". Bắt nó tự tính một con số mà người dùng có thể mang đi đặt lệnh
-     là chuyện không được phép. JS tính, mô hình chỉ được chất vấn xem con số ấy
-     thật hay ảo. Đó cũng đúng vai của Munger: ông không bấm máy tính, ông hỏi vặn
-     xem giả định nào đang chống đỡ con số. */
-  if(metrics.mos){
-    const m2 = metrics.mos;
-    d.push("BIÊN AN TOÀN (đã tính sẵn, đừng tính lại): " + m2.bien.toFixed(0) + "% — " +
-           "lợi suất " + m2.loiSuat.toFixed(1) + "% từ " + m2.nguon +
-           ", so với mức yêu cầu " + m2.yeuCau.toFixed(1) + "%. " +
-           "Mô hình vốn hoá một giai đoạn, giả định dòng tiền đứng yên không tăng trưởng.");
+  /* Từng chỉ số quy về lời, theo đúng ngưỡng mà scoreScreen dùng để chấm điểm,
+     nên hai chỗ không bao giờ mô tả khác nhau. */
+  const y = [];
+  const noi = (k, cau) => { if(scHas(scr[k])) y.push(cau); };
+  noi("pe", scr.pe <= 0 ? "công ty không có lợi nhuận"
+          : scr.pe <= 12 ? "định giá theo lợi nhuận ở mức rẻ"
+          : scr.pe <= 18 ? "định giá theo lợi nhuận quanh mặt bằng"
+          : "định giá theo lợi nhuận đắt");
+  noi("pb", scr.pb < 1 ? "giá thấp hơn giá trị sổ sách"
+          : scr.pb <= 2 ? "giá quanh giá trị sổ sách"
+          : "giá cao hơn nhiều so với sổ sách");
+  noi("roe", scr.roe >= 15 ? "sinh lời trên vốn chủ tốt"
+           : scr.roe >= 10 ? "sinh lời trên vốn chủ trung bình"
+           : "sinh lời trên vốn chủ kém");
+  if(BANK){
+    noi("car", scr.car > 12 ? "đệm vốn dày" : scr.car >= 9 ? "đệm vốn vừa đủ" : "đệm vốn mỏng");
+    noi("npl", scr.npl < 2 ? "nợ xấu thấp" : scr.npl <= 3 ? "nợ xấu trung bình" : "nợ xấu cao");
+    noi("pcr", scr.pcr > 100 ? "đã trích lập vượt nợ xấu"
+             : scr.pcr >= 50 ? "trích lập mới được một phần" : "trích lập rất mỏng");
+    noi("nim", scr.nim >= 3.5 ? "biên lãi dày" : scr.nim >= 2.5 ? "biên lãi trung bình" : "biên lãi mỏng");
   } else {
-    d.push("BIÊN AN TOÀN: chưa tính được, thiếu số");
+    noi("de", scr.de <= 0.5 ? "đòn bẩy thấp" : scr.de <= 1 ? "đòn bẩy vừa phải" : "đòn bẩy cao");
+    if(scHas(scr.fcf))
+      y.push(scr.fcf > 0 ? "dòng tiền tự do dương" : "dòng tiền tự do âm, công ty đang đốt tiền");
+    if(scHas(scr.cfoni))
+      y.push(scr.cfoni >= 1 ? "lợi nhuận biến thành tiền đầy đủ"
+           : scr.cfoni >= 0.7 ? "phần lớn lợi nhuận có tiền theo sau"
+           : "lợi nhuận không biến thành tiền");
   }
-  d.push("Ô CHƯA NHẬP: " + (thieu.length ? thieu.join(" · ") : "không có"));
+  noi("chg12", scr.chg12 > 30 ? "giá đã tăng mạnh trong năm qua"
+             : scr.chg12 >= 0 ? "giá đi ngang trong năm qua"
+             : "giá giảm trong năm qua");
+  noi("froom", scr.froom > 20 ? "khối ngoại còn nhiều dư địa mua"
+             : scr.froom >= 5 ? "khối ngoại còn ít dư địa" : "room ngoại gần kín");
+  d.push("TÌNH TRẠNG: " + (y.length ? y.join(" · ") : "chưa nhập gì"));
 
-  /* Chỉ lấy CÂU ĐẦU của mỗi cờ đỏ, và có trần số lượng.
-     Nguyên văn các cờ đỏ dài cỡ 1.500 chữ. Nhồi hết vào thì mô hình 0,5B vừa chạy
-     chậm (nạp prompt tốn hơn cả sinh chữ), vừa có xu hướng chép lại nguyên si
-     thay vì tự viết. Câu đầu đã đủ để nó nắm được vấn đề. */
-  const cauDau = s => {
-    const t = String(s).replace(/<[^>]+>/g, "").trim();
-    const m = t.match(/^[^.!?]+[.!?]/);
-    return (m ? m[0] : t).trim();
+  /* Biên an toàn đưa vào như DỮ KIỆN ĐÃ TÍNH SẴN, và cũng bằng lời.
+     JS tính, mô hình chỉ được chất vấn xem con số ấy thật hay ảo — đúng vai:
+     người hoài nghi không bấm máy tính, họ hỏi vặn giả định nào đang chống đỡ. */
+  if(metrics.mos){
+    const b = metrics.mos.bien;
+    d.push("BIÊN AN TOÀN (đã tính sẵn, đừng tính lại): " +
+      (b >= 30 ? "dày" : b >= 10 ? "vừa phải" : b >= 0 ? "rất mỏng"
+       : b >= -30 ? "âm — giá cao hơn mức dòng tiền hiện tại biện minh được"
+       : "âm sâu — giá đắt hơn nhiều so với mức dòng tiền hiện tại biện minh được") +
+      ", tính từ " + metrics.mos.nguon +
+      ", giả định dòng tiền đứng yên không tăng trưởng");
+  } else {
+    d.push("BIÊN AN TOÀN: chưa tính được vì thiếu số");
+  }
+
+  if(thieu.length) d.push("Ô CHƯA NHẬP: " + thieu.join(" · "));
+
+  /* Cờ đỏ: lấy câu đầu rồi BỎ HẾT SỐ. Nguyên văn có "CAR dưới 9%", "nợ xấu trên
+     3%" — đưa nguyên vào là mời mô hình chép lại đúng thứ bị cấm. Bỏ số đi thì
+     câu vẫn còn nguyên ý: "CAR dưới ngưỡng", "nợ xấu vượt ngưỡng". */
+  const goiY = s => String(s)
+    .replace(/<[^>]+>/g, "")
+    .replace(/^[^.!?]*/, t => t)          // giữ nguyên, cắt câu ở dưới
+    .trim();
+  const boSo = s => s
+    .replace(/\d[\d.,]*\s*(%|tỷ|lần|điểm phần trăm|điểm)?/g, "")
+    .replace(/\(\s*\)/g, "")
+    .replace(/\s{2,}/g, " ")
+    .replace(/\s+([,.;:])/g, "$1")
+    // bỏ số xong hay để lại dấu cụt: "co lại hai quý liên tiếp:" hoặc "NIM dưới —"
+    .replace(/\s*[—–-]\s*(?=[,.;:]|$)/g, "")
+    .replace(/[:：]\s*$/, ".")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+  const motCau = s => {
+    const t = goiY(s);
+    const c = t.match(/^[^.!?]+[.!?]/);
+    return boSo((c ? c[0] : t)).trim();
   };
-  const crit = flags.filter(f => f[0] === "crit").map(f => cauDau(f[1])).slice(0, 4);
-  const warn = flags.filter(f => f[0] === "warn").map(f => cauDau(f[1])).slice(0, 2);
+  const crit = flags.filter(f => f[0] === "crit").map(f => motCau(f[1])).filter(Boolean).slice(0, 4);
+  const warn = flags.filter(f => f[0] === "warn").map(f => motCau(f[1])).filter(Boolean).slice(0, 2);
   d.push("CẢNH BÁO NGHIÊM TRỌNG: " + (crit.length ? crit.join(" ") : "không có"));
   d.push("CẢNH BÁO NHẸ: " + (warn.length ? warn.join(" ") : "không có"));
 
-  /* Trả về MỘT DÒNG, không xuống dòng, không gạch đầu dòng.
-
-     Đo được: cùng một động cơ, prompt ngắn một dòng trả lời trong 6–9 giây, còn
-     prompt dài nhiều dòng có danh sách gạch đầu dòng thì treo quá 70 giây không
-     trả về gì. Chưa lần ra được nguyên nhân trong thư viện, nhưng hình dạng prompt
-     là thứ ta điều khiển được, nên ép nó về dạng chạy tốt. Bên gọi còn có thêm
-     hàng rào thời gian, xem goiMoHinh(). */
+  /* Trả về MỘT DÒNG. Prompt dài nhiều dòng có gạch đầu dòng từng làm động cơ treo
+     quá bảy mươi giây không trả về gì; hình dạng một dòng thì chạy trong vài giây. */
   return d.join(" | ").replace(/\s+/g, " ").trim();
 }
 
-/* Nhân cách: nhà đầu tư giá trị già đời, hoài nghi, ghét lối nói nước đôi.
-   Ba mệnh lệnh cốt lõi — đảo ngược vấn đề, đòi biên an toàn, và luôn hỏi "rồi
-   sau đó thì sao". Cố ý KHÔNG nêu tên người thật trong prompt: mô hình nhỏ hay
-   trượt sang bắt chước giai thoại và trích dẫn bịa khi được cho một cái tên. */
 const AI_LUAT = [
   "Bạn là một nhà đầu tư giá trị lâu năm, hoài nghi, nói thẳng, ghét sự mơ hồ.",
   "Cách nghĩ của bạn: luôn lật ngược vấn đề — thay vì hỏi vì sao nên mua, hãy hỏi mình sẽ mất tiền bằng cách nào.",

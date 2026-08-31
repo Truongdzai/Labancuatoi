@@ -170,6 +170,9 @@ bao(app.includes("PHAN_BU_RUI_RO") && app.includes("BIÊN AN TOÀN (đã tính s
     "v3 · biên an toàn do JS tính, đưa cho mô hình như dữ kiện");
 bao(app.includes("TUYỆT ĐỐI không tính lại"),
     "v3 · prompt cấm mô hình tự tính biên an toàn");
+// Cấm mô hình viết số mà lại đưa số cho nó đọc là ra bài không thể giải.
+bao(app.includes("CỐ Ý KHÔNG CÓ MỘT CHỮ SỐ NÀO") && /const boSo = s => s/.test(app),
+    "v3 · mô tả gửi cho mô hình đã bỏ hết chữ số");
 // Xếp hạng chéo BẮT BUỘC dùng chung bộ luật, không được có thang điểm riêng.
 bao(app.includes("function scoreScreen(nguon)") && app.includes("const r = scoreScreen(p);"),
     "v3 · bảng xếp hạng dùng chung scoreScreen, không có thang riêng");
