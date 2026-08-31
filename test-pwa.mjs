@@ -132,7 +132,7 @@ const off = await ev(`(()=>({
   moc: !!document.getElementById('tiles')
 }))()`);
 bao(off.title === "La Bàn Tự Do Tài Chính", "TẮT MẠNG — trang vẫn tải");
-bao(off.tabs === 5, "TẮT MẠNG — đủ 5 tab", String(off.tabs));
+bao(off.tabs === 7, "TẮT MẠNG — đủ 7 tab", String(off.tabs));
 bao(off.the === 196, "TẮT MẠNG — đủ 196 thẻ cẩm nang", String(off.the));
 
 const luu = await ev(`(()=>{try{localStorage.setItem('htdtc.thu','1');

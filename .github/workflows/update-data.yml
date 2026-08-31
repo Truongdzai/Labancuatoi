@@ -1,0 +1,76 @@
+# Dựng lại app/data.json mỗi chiều sau phiên, rồi commit thẳng vào main.
+#
+# 16:00 giờ Việt Nam = 09:00 UTC. GitHub Actions chỉ hiểu UTC nên phải quy đổi.
+# Lịch cron của Actions hay chạy trễ vài phút tới nửa tiếng khi hệ thống bận —
+# đó là chuyện bình thường, không phải hỏng.
+#
+# Chỉ chạm dữ liệu công khai của thị trường. Không có gì của người dùng đi qua đây.
+
+name: Cập nhật số liệu thị trường
+
+on:
+  schedule:
+    - cron: "0 9 * * *"        # 09:00 UTC = 16:00 (+07), mỗi ngày
+  workflow_dispatch:            # cho phép bấm chạy tay ở tab Actions
+
+# Cần quyền ghi để commit lại tệp data.json.
+permissions:
+  contents: write
+
+# Hai lần chạy chồng lên nhau sẽ giẫm chân nhau khi commit.
+concurrency:
+  group: cap-nhat-so-lieu
+  cancel-in-progress: false
+
+jobs:
+  cap-nhat:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Lấy mã nguồn
+        uses: actions/checkout@v4
+
+      - name: Cài Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Cài thư viện
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "vnstock>=3.2" pandas
+
+      - name: Chạy scraper
+        env:
+          ACCEPT_TC: "tôi đồng ý"     # vnstock hỏi điều khoản khi chạy không có người
+          PYTHONUTF8: "1"
+        # --nghi: vnstock chặn tốc độ ở tài khoản thường (khoảng 20 lượt/phút).
+        # 5 giây một mã đủ thoáng; 20 mã mất chừng hai phút.
+        run: python scraper.py --ra app/data.json --nghi 5
+
+      - name: Kiểm tra tệp vừa sinh
+        run: |
+          python - <<'PY'
+          import json, sys
+          d = json.load(open("app/data.json", encoding="utf-8"))
+          assert isinstance(d.get("ma"), dict) and d["ma"], "data.json không có mã nào"
+          co = sum(1 for v in d["ma"].values() if v.get("pe") is not None)
+          print("%d mã, %d mã có chỉ số định giá, phiên %s" % (len(d["ma"]), co, d.get("phien")))
+          # Dưới một nửa số mã có chỉ số thì coi như nguồn đang hỏng — đừng đè tệp cũ.
+          if co * 2 < len(d["ma"]):
+              sys.exit("Quá ít mã lấy được chỉ số — không commit.")
+          PY
+
+      - name: Commit nếu có thay đổi
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/data.json
+          # Không có gì đổi (cuối tuần, ngày nghỉ lễ) thì thoát êm, không tạo commit rỗng.
+          if git diff --staged --quiet; then
+            echo "Số liệu không đổi — bỏ qua."
+            exit 0
+          fi
+          git commit -m "Số liệu thị trường $(TZ=Asia/Ho_Chi_Minh date +'%d/%m/%Y')"
+          git push

@@ -28,6 +28,12 @@ console.log("Kiểm tra " + SRC);
 // --- cú pháp khối <script> ---
 const js = app.match(/<script>([\s\S]*)<\/script>/);
 if (!js) { console.error("Không tìm thấy khối <script>."); process.exit(1); }
+
+// Regex trên tham lam: nó lấy từ thẻ <script> TRẦN đầu tiên tới </script> CUỐI cùng.
+// Nên mọi thẻ script có thuộc tính (CDN chẳng hạn) phải nằm TRƯỚC khối script chính,
+// nếu không phần đánh dấu HTML sẽ lọt vào chuỗi JS và bước kiểm cú pháp vỡ vô cớ.
+bao(!/<script>[\s\S]*<script\s/.test(app),
+    "mọi thẻ <script src> nằm trước khối script chính");
 try { new vm.Script(js[1], { filename: "index.html:<script>" }); bao(true, "cú pháp JS hợp lệ"); }
 catch (e) { bao(false, "lỗi cú pháp JS: " + e.message); process.exit(1); }
 
@@ -59,7 +65,29 @@ bao(app.includes('href="./manifest.webmanifest"'), "index.html liên kết manif
 bao(app.includes('navigator.serviceWorker.register("./sw.js"'), "index.html đăng ký sw.js");
 bao(app.includes('viewport-fit=cover'), "viewport có viewport-fit=cover");
 
+// --- tab Lộ trình Lãi kép: nút, panel và Chart.js phải khớp nhau ---
+bao(app.includes('data-t="lk"') && app.includes('id="p-lk"'), "tab Lãi kép có cả nút lẫn panel");
+bao(/id="chartjs-cdn"[^>]*integrity="sha384-/.test(app), "thẻ Chart.js có khoá SRI");
+bao(app.includes('id="lk-canvas"'), "có canvas cho biểu đồ lãi kép");
+
+// --- trợ lý AI: ô giao diện và hàm suy luận phải đi cùng nhau ---
+bao(app.includes('id="aibox"') && app.includes("async function generateLocalAIAnalysis"),
+    "trợ lý AI có cả ô lẫn hàm generateLocalAIAnalysis");
+
+// --- số liệu tự động ---
+bao(app.includes('fetch("./data.json"'), "app có đọc data.json");
+if (existsSync("app/data.json")) {
+  try {
+    const d = JSON.parse(readFileSync("app/data.json", "utf8"));
+    const n = Object.keys(d.ma || {}).length;
+    bao(n > 0, `data.json hợp lệ — ${n} mã, phiên ${d.phien || "?"}`);
+  } catch (e) { bao(false, "data.json hỏng: " + e.message); }
+} else {
+  console.log("  · chưa có app/data.json — app vẫn chạy, người dùng nhập tay");
+}
+
 // --- các file trong SHELL của sw phải tồn tại thật ---
+// data.json cố ý không nằm trong SHELL: nó phải đi mạng trước, xem sw.js.
 const shell = (sw.match(/const SHELL = \[([\s\S]*?)\]/) || [, ""])[1]
   .split(",").map(s => s.trim().replace(/^"|"$/g, "")).filter(s => s && s !== "./");
 for (const f of shell) bao(existsSync(join("app", f)), "SHELL: " + f);

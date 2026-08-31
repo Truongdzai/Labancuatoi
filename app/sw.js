@@ -4,7 +4,7 @@
 
    ĐỔI PHIÊN BẢN mỗi lần sửa app, nếu không điện thoại sẽ giữ mãi bản cũ.
 */
-const PHIEN_BAN = "la-ban-v1.1.0";
+const PHIEN_BAN = "la-ban-v1.2.0";
 const CACHE_SHELL = PHIEN_BAN + "-shell";
 const CACHE_FONT = PHIEN_BAN + "-font";
 
@@ -20,6 +20,11 @@ const SHELL = [
 
 /* Google Fonts là host ngoài duy nhất app dùng — cache lại để offline vẫn đúng chữ. */
 const HOST_FONT = ["fonts.googleapis.com", "fonts.gstatic.com"];
+
+/* Chart.js tải từ jsDelivr cho tab "Lộ trình Lãi kép". Cùng cách xử lý như font:
+   lần đầu online thì tải và giữ lại, từ đó offline vẫn vẽ được biểu đồ. */
+const HOST_CDN = ["cdn.jsdelivr.net"];
+const CACHE_CDN = PHIEN_BAN + "-cdn";
 
 self.addEventListener("install", event => {
   event.waitUntil((async () => {
@@ -54,15 +59,16 @@ self.addEventListener("fetch", event => {
   let url;
   try { url = new URL(req.url); } catch (e) { return; }
 
-  // font: cache-first, nếu chưa có thì tải và lưu lại
-  if (HOST_FONT.includes(url.hostname)) {
+  // font và thư viện CDN: cache-first, chưa có thì tải rồi lưu lại
+  if (HOST_FONT.includes(url.hostname) || HOST_CDN.includes(url.hostname)) {
+    const kho = HOST_CDN.includes(url.hostname) ? CACHE_CDN : CACHE_FONT;
     event.respondWith((async () => {
       try {
         const hit = await caches.match(req);
         if (hit) return hit;
         const res = await fetch(req);
         try {
-          const c = await caches.open(CACHE_FONT);
+          const c = await caches.open(kho);
           await c.put(req, res.clone());
         } catch (e) { }
         return res;
@@ -93,6 +99,24 @@ self.addEventListener("fetch", event => {
         return await fetch(req);
       } catch (e) {
         const hit = await caches.match("./index.html");
+        return hit || Response.error();
+      }
+    })());
+    return;
+  }
+
+  // data.json: mạng trước, cache chỉ để dùng khi mất mạng.
+  // Nếu để cache-first thì số liệu thị trường sẽ đứng im mãi ở bản đầu tiên.
+  if (url.pathname.endsWith("/data.json")) {
+    event.respondWith((async () => {
+      try {
+        const res = await fetch(req, { cache: "no-store" });
+        if (res && res.ok) {
+          try { const c = await caches.open(CACHE_SHELL); await c.put(req, res.clone()); } catch (e) { }
+        }
+        return res;
+      } catch (e) {
+        const hit = await caches.match(req);
         return hit || Response.error();
       }
     })());

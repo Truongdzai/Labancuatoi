@@ -40,7 +40,7 @@ const NAMES = [
   // đã có sẵn trong app
   "monthsTo", "yrs", "money", "niceMax",
   // A1-5 · DCA
-  "dca",
+  "dca", "laiKep",
   // A1-6 · mua vs thuê
   "pmt", "soSanhMuaThue", "diemHoaVon",
   // A1-1 · ngân sách 50/30/20
@@ -127,6 +127,52 @@ t("lãi 0% thì đầu tư = tích luỹ", ["dca"], () => {
 });
 t("đầu tư luôn ≥ tích luỹ khi lãi dương", ["dca"], () => {
   for (const y of [1, 5, 10, 30]) truthy(F.dca(5, y, 8).dauTu >= F.dca(5, y, 8).tichLuy, "sai ở " + y);
+});
+
+/* ============================================================
+   LÃI KÉP — tab "Lộ trình Lãi kép", có thêm vốn ban đầu
+   ============================================================ */
+group("laiKep — vốn ban đầu + góp đều");
+t("vốn ban đầu = 0 thì trùng khít dca()", ["laiKep", "dca"], () => {
+  for (const [pmt, nam, r] of [[10, 20, 10], [5, 30, 8], [3, 7, 12]]) {
+    approx(F.laiKep(0, pmt, r, nam).tong, F.dca(pmt, nam, r).dauTu, 1e-9);
+    approx(F.laiKep(0, pmt, r, nam).goc,  F.dca(pmt, nam, r).tichLuy, 1e-9);
+  }
+});
+t("vốn gốc = von + pmt × 12 × năm", ["laiKep"], () =>
+  approx(F.laiKep(500, 10, 10, 20).goc, 500 + 2400, 1e-9));
+t("vốn ban đầu 500tr, 20 năm, 10%/năm → riêng phần vốn thành 500 × 1,1^20", ["laiKep"], () =>
+  approx(F.laiKep(500, 0, 10, 20).tong, 500 * Math.pow(1.1, 20), 1e-6));
+t("lãi 0% thì tổng = gốc", ["laiKep"], () => {
+  const r = F.laiKep(300, 10, 0, 15); approx(r.tong, r.goc, 1e-6);
+});
+t("chuỗi theo năm khớp với kết quả cuối kỳ", ["laiKep"], () => {
+  const r = F.laiKep(200, 8, 9, 12);
+  const cuoi = r.series[r.series.length - 1];
+  eq(cuoi.y, 12, "năm cuối");
+  approx(cuoi.tong, r.tong, 1e-6);
+  approx(cuoi.goc, r.goc, 1e-6);
+});
+t("chuỗi tăng đều, tổng luôn ≥ gốc khi lãi dương", ["laiKep"], () => {
+  const r = F.laiKep(100, 5, 10, 25);
+  for (let i = 1; i < r.series.length; i++) {
+    truthy(r.series[i].tong >= r.series[i - 1].tong, "tổng phải tăng ở năm " + i);
+    truthy(r.series[i].tong >= r.series[i].goc, "tổng < gốc ở năm " + i);
+  }
+});
+t("namVuot là năm đầu tiên lãi vượt gốc, và đúng theo chuỗi", ["laiKep"], () => {
+  const r = F.laiKep(0, 10, 10, 40);
+  truthy(r.namVuot !== null, "40 năm ở 10%/năm thì lãi phải vượt gốc");
+  const p = r.series[r.namVuot], truoc = r.series[r.namVuot - 1];
+  truthy(p.tong - p.goc > p.goc, "năm vượt phải thoả điều kiện");
+  truthy(truoc.tong - truoc.goc <= truoc.goc, "năm liền trước thì chưa được thoả");
+});
+t("chặng quá ngắn thì chưa có năm vượt", ["laiKep"], () =>
+  eq(F.laiKep(0, 10, 8, 5).namVuot, null));
+t("số âm bị kẹp về 0, không sinh NaN", ["laiKep"], () => {
+  const r = F.laiKep(-100, -5, 10, 10);
+  eq(r.von, 0); eq(r.pmt, 0); approx(r.tong, 0, 1e-9); approx(r.goc, 0, 1e-9);
+  truthy(isFinite(r.boi) && isFinite(r.pcLai), "boi/pcLai không được NaN");
 });
 
 /* ============================================================

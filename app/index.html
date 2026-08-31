@@ -22,6 +22,14 @@
 <meta name="mobile-web-app-capable" content="yes">
 
 <style>*{margin:0;padding:0}</style>
+
+<!-- Chart.js — vẽ biểu đồ lãi kép ở tab "Lộ trình Lãi kép".
+     Ghim đúng phiên bản và khoá bằng SRI: nếu CDN bị đổi nội dung, trình duyệt
+     từ chối chạy file. crossorigin=anonymous để không gửi cookie đi kèm.
+     Không có Chart.js thì tab vẫn sống — có bảng số thay thế, xem drawLaiKep(). -->
+<script id="chartjs-cdn" defer crossorigin="anonymous"
+  integrity="sha384-b0GXujLkk9eYYSmcSfoyZbfyElGAQnDyY0skCHSG6w3JgTMFnz11ggrTAr7seu9f"
+  src="https://cdn.jsdelivr.net/npm/chart.js@4.4.9/dist/chart.umd.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=IBM+Plex+Mono:wght@500;600&display=swap">
@@ -400,7 +408,7 @@ nav.tabs button, .btn, .chips button, .subtabs button{min-height:44px}
   header.top{backdrop-filter:none; -webkit-backdrop-filter:none; background:var(--ground)}
   nav.tabs{
     position:fixed; left:0; right:0; bottom:0; z-index:60;
-    display:grid; grid-template-columns:repeat(5,1fr); gap:2px;
+    display:grid; grid-template-columns:repeat(4,1fr); gap:2px;
     margin:0; width:auto; overflow:visible;
     background:color-mix(in srgb,var(--surface) 92%, transparent);
     backdrop-filter:blur(14px);
@@ -416,8 +424,12 @@ nav.tabs button, .btn, .chips button, .subtabs button{min-height:44px}
   }
   .tabs .full{display:none}
   .tabs .short{display:inline}
-  main{padding-bottom:calc(104px + env(safe-area-inset-bottom))}
-  .toastbox{bottom:calc(88px + env(safe-area-inset-bottom))}
+  /* Phải là main.wrap chứ không phải main: .wrap là selector lớp nên thắng selector
+     thẻ, và quy tắc padding:0 20px của nó vẫn đè lên. Viết `main` không thôi thì
+     phần chừa chỗ này im lặng không có tác dụng, và đáy trang chui xuống dưới
+     thanh tab. Thanh tab cao 2 hàng (~105px) nên chừa 116px cho thoáng. */
+  main.wrap{padding-bottom:calc(116px + env(safe-area-inset-bottom))}
+  .toastbox{bottom:calc(116px + env(safe-area-inset-bottom))}
   .topbar{flex-wrap:nowrap}
 }
 
@@ -441,6 +453,7 @@ nav.tabs button, .btn, .chips button, .subtabs button{min-height:44px}
       <button data-t="map" aria-current="true"><span class="full">Bản đồ</span><span class="short">Bản đồ</span></button>
       <button data-t="calc"><span class="full">Con số của tôi</span><span class="short">Con số</span></button>
       <button data-t="screen">Bộ lọc</button>
+      <button data-t="lk"><span class="full">Lộ trình Lãi kép</span><span class="short">Lãi kép</span></button>
       <button data-t="track"><span class="full">Theo dõi</span><span class="short">Theo dõi</span></button>
       <button data-t="kb"><span class="full">Cẩm nang</span><span class="short">Cẩm nang</span></button>
       <button data-t="data"><span class="full">Dữ liệu</span><span class="short">Dữ liệu</span></button>
@@ -723,8 +736,12 @@ nav.tabs button, .btn, .chips button, .subtabs button{min-height:44px}
   <div class="card pad" style="margin-top:22px">
     <div class="field" style="max-width:260px">
       <label for="sc-ticker">Mã cổ phiếu <span class="hint">— chỉ để bạn dễ nhớ</span></label>
-      <div class="inp"><input id="sc-ticker" type="text" maxlength="12" placeholder="VD: ABC" autocomplete="off"></div>
+      <div class="inp"><input id="sc-ticker" type="text" maxlength="12" placeholder="VD: ABC" autocomplete="off" list="sc-macolist"></div>
+      <datalist id="sc-macolist"></datalist>
     </div>
+
+    <!-- Hiện lên khi data.json có sẵn số của mã vừa gõ. Trống thì tab hoạt động y như cũ. -->
+    <div id="sc-auto" hidden></div>
 
     <h5 style="margin:20px 0 8px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3)">Ngành</h5>
     <div id="sc-sector" role="group" aria-label="Chọn ngành" style="display:inline-flex;gap:2px;padding:3px;background:var(--surface-3);border-radius:9px">
@@ -764,8 +781,55 @@ nav.tabs button, .btn, .chips button, .subtabs button{min-height:44px}
 
   <div id="scflags" style="margin-top:18px"></div>
 
+  <!-- ===== Trợ lý AI Nội bộ =====
+       Hôm nay: generateLocalAIAnalysis() là bộ luật đọc thẳng kết quả scoreScreen().
+       Mai sau: cùng chỗ đó nạp WebLLM (Llama-3 / Gemma) chạy trên WebGPU, vẫn
+       trong máy người dùng, không gửi số liệu đi đâu. Xem mục AI ở khối script. -->
+  <div class="card pad" id="aibox" style="margin-top:18px">
+    <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap">
+      <div style="flex:1;min-width:230px">
+        <div class="eyebrow">Chạy trong máy bạn</div>
+        <h3 style="font-size:17px;margin:5px 0 3px">Trợ lý AI Nội bộ</h3>
+        <p style="font-size:13px;color:var(--ink2);line-height:1.6">Đọc lại toàn bộ điểm số và cảnh báo ở trên rồi viết thành một đoạn nhận xét liền mạch — nêu rõ chỗ nào mâu thuẫn và bạn còn thiếu số nào.</p>
+      </div>
+      <button class="btn primary" id="ai-run" type="button">Viết nhận xét</button>
+    </div>
+    <div class="note" id="ai-engine"></div>
+    <div id="ai-out" style="margin-top:12px" hidden></div>
+  </div>
+
   <div class="callout" style="margin-top:18px">
     Đây là công cụ tự đánh giá, <strong>không phải lời khuyên đầu tư</strong>. Điểm số chỉ phản ánh đúng những con số bạn nhập vào — nó không kiểm chứng được số liệu, không biết gì về ngành, ban lãnh đạo hay chất lượng lợi nhuận, và không dự báo giá. Các ngưỡng chấm điểm là quy ước lấy từ cẩm nang này, không phải chuẩn mực ngành. Riêng chế độ ngân hàng: kể cả khi đủ CAR, nợ xấu và bao phủ, công cụ vẫn <strong>không thấy</strong> mức độ tập trung danh mục cho vay, tỷ trọng cho vay bất động sản, nợ tái cơ cấu chưa chuyển nhóm, cho vay bên liên quan, hay chất lượng nguồn vốn. Đó là những thứ làm sập một ngân hàng, và không ô nào ở trên đo được chúng.
+  </div>
+</section>
+
+<!-- ============ LỘ TRÌNH LÃI KÉP ============ -->
+<section class="panel" id="p-lk" hidden>
+  <div class="sect-head"><span class="eyebrow">Thời gian làm hộ</span></div>
+  <h2 style="font-size:28px;letter-spacing:-.028em;margin-bottom:10px">Lộ trình Lãi kép</h2>
+  <p class="lede">Bốn con số, một đường cong. Biểu đồ đặt cạnh nhau <strong>tổng số tiền bạn thật sự bỏ ra</strong> và <strong>tổng tài sản sau lãi kép</strong>. Khoảng cách giữa hai đường chính là phần thời gian làm hộ bạn — nó gần như phẳng ở những năm đầu rồi mới dựng đứng, và đó là lý do năm bắt đầu quan trọng hơn số tiền mỗi tháng.</p>
+
+  <div class="card pad" style="margin-top:22px">
+    <div class="grid2" id="lk-fields"></div>
+    <div class="note" id="lk-hint"></div>
+  </div>
+
+  <div class="tiles" style="margin-top:18px" id="lk-tiles"></div>
+
+  <div class="card pad" style="margin-top:18px">
+    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px">
+      <h3 style="font-size:17px">Vốn gốc so với tổng tài sản</h3>
+      <button class="btn" id="lk-togtable" type="button">Xem dạng bảng</button>
+    </div>
+    <div class="chart" style="position:relative;height:340px"><canvas id="lk-canvas" aria-label="Biểu đồ so sánh vốn gốc đã bỏ ra và tổng tài sản sau lãi kép theo từng năm" role="img"></canvas></div>
+    <div id="lk-fallback" hidden></div>
+    <div id="lk-table" class="tblwrap" style="margin-top:14px" hidden></div>
+  </div>
+
+  <div id="lk-cross" style="margin-top:18px"></div>
+
+  <div class="callout" style="margin-top:18px">
+    <strong>Tỷ suất là giả định, không phải cam kết.</strong> Mô hình cho lợi suất chạy đều tăm tắp mỗi tháng suốt cả chặng. Thị trường thật không như vậy: nó có những năm âm hai chữ số, và thứ tự các năm tốt xấu ảnh hưởng tới kết quả cuối cùng nhiều hơn người ta tưởng. Con số ở đây dùng để <strong>so sánh các lựa chọn với nhau</strong>, không phải để dự báo số dư tài khoản của bạn năm 2046.
   </div>
 </section>
 
@@ -936,6 +1000,18 @@ nav.tabs button, .btn, .chips button, .subtabs button{min-height:44px}
   </div>
   <p id="datamsg" style="margin-top:14px;font-size:13.5px;color:var(--good)" hidden></p>
   <div id="backup-nhac"></div>
+
+  <!-- Số liệu thị trường do GitHub Actions cập nhật vào app/data.json mỗi chiều. -->
+  <div class="card pad" style="margin-top:18px">
+    <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap">
+      <div style="flex:1;min-width:230px">
+        <h4 style="font-size:14.5px;margin-bottom:4px">Số liệu thị trường tự động</h4>
+        <p style="font-size:13px;color:var(--ink2);line-height:1.6">Một tệp <code>data.json</code> nằm cùng chỗ với trang này, do máy chủ dựng lại mỗi chiều sau phiên. Tab <em>Bộ lọc</em> đọc tệp đó để điền sẵn các ô lấy được. Đây là dữ liệu công khai của thị trường — <strong>không có gì của bạn được gửi đi</strong>.</p>
+      </div>
+      <button class="btn" id="auto-reload" type="button">Tải lại</button>
+    </div>
+    <div class="note" id="auto-status">Đang kiểm tra…</div>
+  </div>
   <div class="card pad" id="fallbackbox" style="margin-top:18px" hidden>
     <h4 style="font-size:14.5px;margin-bottom:4px">Sao lưu thủ công</h4>
     <p style="font-size:13px;color:var(--ink2);margin-bottom:10px">Chép toàn bộ đoạn dưới và lưu vào một file <code>.json</code>. Để khôi phục, dán lại vào ô này rồi bấm “Nhập từ ô này”.</p>
@@ -958,6 +1034,13 @@ nav.tabs button, .btn, .chips button, .subtabs button{min-height:44px}
 
   <div class="callout" style="margin-top:12px">
     <strong>Riêng tư.</strong> Không có máy chủ nào phía sau app này. Không đăng nhập, không analytics, không gửi số liệu đi đâu — kể cả khi bạn mở nó từ một địa chỉ web. Trang web chỉ chứa mã nguồn; số liệu do trình duyệt của bạn giữ và không bao giờ rời khỏi máy.
+    <br><br><strong>Nói cho đủ về những gì app tải về.</strong> Trang có gọi ra ngoài <em>ba</em> chỗ, và cả ba đều là tải xuống một chiều — không chỗ nào nhận được số liệu của bạn:
+    <ul style="margin:8px 0 0 18px;line-height:1.7">
+      <li><strong>Google Fonts</strong> — bộ chữ của trang</li>
+      <li><strong>jsDelivr</strong> — thư viện vẽ biểu đồ ở tab Lộ trình Lãi kép, ghim đúng phiên bản và khoá bằng mã băm SRI để không ai tráo được nội dung</li>
+      <li><strong>data.json</strong> — số liệu thị trường công khai, nằm ngay trên máy chủ của chính trang này</li>
+    </ul>
+    <br>Ba nơi đó thấy được địa chỉ IP của bạn, đúng như mọi trang web bạn mở. Chúng <strong>không</strong> thấy con số nào bạn nhập, vì những con số ấy không bao giờ được gửi đi. Sau lần mở đầu tiên, cả ba đều được lưu lại trong máy nên các lần sau app chạy được cả khi mất mạng.
   </div>
 </section>
 
@@ -2155,6 +2238,7 @@ const DEF = {
   lessons:{},                           // mười bài học đầu tư — {số bài: true}
   ikigai:{a:"", b:"", c:"", d:""},      // bốn ô suy ngẫm, chữ tự do
   dca:{pmt:10, nam:20, rate:10},        // máy tính đầu tư đều đặn
+  lk:{von:0, pmt:10, rate:10, nam:20},  // tab Lộ trình Lãi kép — mọi tiền tính bằng TRIỆU ₫
   nha:{                                 // máy tính mua vs thuê — mọi giá trị TRIỆU ₫
     loai:"cc", gia:3000, von:900, nam:25, kyHan:25, thueThang:10, soLanChuyen:1,
     lai:11, tangGia:5, phiThang:1.2, lamPhat:4, loiSuat:10, coPhiBaoTri:true,
@@ -2189,6 +2273,7 @@ function merge(p){
     scr:{...b.scr, ...obj(p.scr)},
     ikigai:{...b.ikigai, ...obj(p.ikigai)},
     dca:{...b.dca, ...obj(p.dca)},
+    lk:{...b.lk, ...obj(p.lk)},
     nha:{...b.nha, ...obj(p.nha), phi:{...b.nha.phi, ...obj(obj(p.nha).phi)}},
     baThu:{...b.baThu, ...obj(p.baThu)},
     values:{...b.values, ...obj(p.values)},
@@ -2280,12 +2365,13 @@ function calc(){
 /* ============================================================
    TABS
    ============================================================ */
-const PANELS = {map:"#p-map", calc:"#p-calc", screen:"#p-screen", track:"#p-track", kb:"#p-kb", data:"#p-data"};
+const PANELS = {map:"#p-map", calc:"#p-calc", screen:"#p-screen", lk:"#p-lk", track:"#p-track", kb:"#p-kb", data:"#p-data"};
 $("#tabs").addEventListener("click", e => {
   const b = e.target.closest("button[data-t]"); if(!b) return;
   for(const x of $("#tabs").children) x.setAttribute("aria-current", x === b ? "true" : "false");
   for(const k in PANELS) $(PANELS[k]).hidden = (k !== b.dataset.t);
   if(b.dataset.t === "track") drawChart();
+  if(b.dataset.t === "lk") renderLaiKep();
   window.scrollTo({top:0, behavior:"smooth"});
 });
 
@@ -4142,6 +4228,408 @@ function renderScreen(){
   }
 }
 
+/* ============================================================
+   LỘ TRÌNH LÃI KÉP — vốn ban đầu + góp đều hằng tháng
+   ============================================================ */
+/* Vốn ban đầu sinh lãi trọn chặng; khoản góp hằng tháng là niên kim cuối kỳ.
+     FV = von×(1+i)^n + pmt×((1+i)^n − 1)/i,   i = (1+r)^(1/12) − 1, n = số tháng.
+   Cùng công thức với dca() ở tab Con số, chỉ thêm số hạng vốn ban đầu — đặt von = 0
+   thì hai hàm cho ra đúng một kết quả (10 tr/th · 20 năm · 10%/năm → 7.182,6 triệu).
+   Mọi số tiền tính bằng TRIỆU ₫, thống nhất với phần còn lại của app. */
+function laiKep(von, pmt, ratePct, nam){
+  const v0 = Math.max(0, num(von)), m = Math.max(0, num(pmt));
+  const N  = Math.max(0, Math.round(num(nam)*12));
+  const i  = Math.pow(1 + num(ratePct)/100, 1/12) - 1;
+  const fv = n => v0*Math.pow(1+i, n) + (i === 0 ? m*n : m*(Math.pow(1+i, n) - 1)/i);
+
+  const series = [];
+  for(let y = 0; y <= Math.max(0, Math.round(num(nam))); y++)
+    series.push({y, goc: v0 + m*12*y, tong: fv(y*12)});
+
+  /* năm đầu tiên phần lãi vượt phần gốc — cột mốc dễ nhớ nhất của lãi kép */
+  const vuot = series.find(p => p.tong - p.goc > p.goc);
+
+  const goc = v0 + m*N, tong = fv(N);
+  return {
+    von:v0, pmt:m, nam:num(nam), rate:num(ratePct), soThang:N,
+    goc, tong, lai: tong - goc,
+    boi: goc > 0 ? tong/goc : 0,
+    pcLai: tong > 0 ? (tong - goc)/tong*100 : 0,
+    namVuot: vuot ? vuot.y : null,
+    series
+  };
+}
+
+const LK_FIELDS = [
+  ["von", "Vốn ban đầu",      "số đã có sẵn, bỏ vào ngay hôm nay", "tr"],
+  ["pmt", "Đầu tư mỗi tháng", "số tiền cố định, đều đặn",          "tr/th"],
+  ["rate","Tỷ suất kỳ vọng",  "%/năm, giả định chạy đều",          "%/năm"],
+  ["nam", "Số năm",           "càng dài lãi kép càng ăn",          "năm"]
+];
+function buildLkFields(){
+  const box = $("#lk-fields"); box.innerHTML = "";
+  LK_FIELDS.forEach(([k,label,hint,unit]) => {
+    const f = el("div","field");
+    f.innerHTML = `<label for="lk-${k}">${label} <span class="hint">— ${hint}</span></label>
+      <div class="inp"><input id="lk-${k}" type="number" inputmode="decimal" step="any" min="0" value="${S.lk[k]}"><span class="unit">${unit}</span></div>`;
+    f.querySelector("input").addEventListener("input", e => {
+      S.lk[k] = Math.max(0, num(e.target.value)); save(); renderLaiKep();
+    });
+    box.appendChild(f);
+  });
+}
+
+function renderLaiKep(){
+  const r = laiKep(S.lk.von, S.lk.pmt, S.lk.rate, S.lk.nam);
+
+  $("#lk-hint").innerHTML =
+    `Tham chiếu hiệu suất 20 năm tại Việt Nam (Dragon Capital, 2021 — <em>dữ liệu lịch sử, không phải dự báo</em>): ` +
+    `cổ phiếu 15,9% · bất động sản 11,9% · vàng 9% · gửi tiết kiệm 8% · giữ USD 2,2%. ` +
+    `Đầu tư thụ động dài hạn 7–10%/năm là đủ để đi đường dài. Bất kỳ lời hứa 100%/năm nào cũng là báo động đỏ.`;
+
+  const box = $("#lk-tiles"); box.innerHTML = "";
+  box.appendChild(tile(`Tổng tài sản sau ${r.nam} năm`, money(r.tong),
+    `Từ ${money(r.von)} vốn ban đầu cộng ${money(r.pmt)}/tháng suốt ${r.soThang} tháng, tỷ suất ${dec(r.rate,1)}%/năm.`,
+    "var(--accent)", "hero"));
+  box.appendChild(tile("Vốn gốc bạn thật sự bỏ ra", money(r.goc),
+    `Đúng bằng ${money(r.von)} + ${money(r.pmt)} × 12 × ${r.nam}. Tiền nằm yên thì chỉ có bấy nhiêu.`,
+    "var(--ink3)"));
+  const tl = tile("Phần do lãi kép làm ra", money(r.lai),
+    r.goc > 0 ? `Gấp ${dec(r.boi,2)}× số tiền bạn bỏ ra. Bạn không làm gì thêm — thời gian làm hộ.`
+              : "Nhập vốn ban đầu hoặc số tiền mỗi tháng để tính.",
+    "var(--brass)");
+  tl.insertAdjacentHTML("beforeend",
+    `<div class="meter"><i style="width:${Math.max(0,Math.min(100,r.pcLai)).toFixed(0)}%;background:var(--brass)"></i></div>
+     <div class="s" style="margin-top:6px">${r.pcLai.toFixed(0)}% khối tài sản cuối kỳ là tiền tự sinh ra</div>`);
+  box.appendChild(tl);
+
+  drawLaiKep(r);
+
+  const cx = $("#lk-cross");
+  if(r.namVuot !== null){
+    const p = r.series[r.namVuot];
+    cx.innerHTML = `<div class="card pad" style="border-left:3px solid var(--brass)">
+      <div class="k" style="font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--brass);font-weight:600">Điểm giao</div>
+      <h3 style="font-size:19px;margin:6px 0 8px;letter-spacing:-.02em">Năm thứ ${r.namVuot}, tiền lãi vượt tiền gốc</h3>
+      <p style="font-size:14.5px;color:var(--ink2);line-height:1.62;font-family:'Source Serif 4',serif">Tới cuối năm ${r.namVuot}, phần lãi kép (${money(p.tong - p.goc)}) lần đầu lớn hơn toàn bộ số tiền bạn đã bỏ ra (${money(p.goc)}). Từ mốc đó trở đi, phần lớn khối tài sản không còn đến từ sức lao động của bạn nữa. <strong>Mốc này phụ thuộc gần như hoàn toàn vào số năm chứ không phải số tiền mỗi tháng</strong> — thử tăng gấp đôi khoản góp mà giữ nguyên số năm, bạn sẽ thấy năm giao nhau gần như không nhúc nhích.</p>
+    </div>`;
+  } else {
+    cx.innerHTML = `<div class="callout">Trong ${r.nam} năm, phần lãi kép chưa vượt được phần vốn gốc. Kéo dài số năm ra để xem nó vượt ở mốc nào — đó là bài kiểm tra trực quan nhất về việc thời gian đáng giá bao nhiêu.</div>`;
+  }
+}
+
+/* ---------- biểu đồ Chart.js ----------
+   Chart.js tải qua CDN với defer nên có thể chưa sẵn sàng ở lần vẽ đầu. Nếu chưa có
+   thì chờ script load rồi vẽ lại; nếu CDN hỏng hẳn (offline lần đầu, mạng chặn, hoặc
+   SRI không khớp) thì rơi xuống bảng số — tab vẫn dùng được, chỉ mất hình. */
+let lkChart = null, lkChoScript = false;
+function lkMauSac(){
+  const cs = getComputedStyle(document.documentElement);
+  const c = n => cs.getPropertyValue(n).trim();
+  return {accent:c("--accent-2") || "#2a78d6", ink3:c("--ink3") || "#78838F",
+          ink2:c("--ink2") || "#495463", line:c("--line") || "#DBE1E8",
+          surface:c("--surface") || "#FFFFFF", ink:c("--ink") || "#12181F"};
+}
+function drawLaiKep(r){
+  const cv = $("#lk-canvas"), fb = $("#lk-fallback"), pts = r.series;
+
+  if(pts.length < 2 || r.tong <= 0){
+    if(lkChart){ lkChart.destroy(); lkChart = null; }
+    cv.hidden = true; fb.hidden = false;
+    fb.innerHTML = `<p class="empty">Nhập vốn ban đầu hoặc số tiền mỗi tháng, cùng số năm, để vẽ biểu đồ.</p>`;
+    $("#lk-table").innerHTML = "";
+    return;
+  }
+
+  /* bảng số — luôn dựng sẵn, vừa để bấm xem vừa làm phương án thay thế cho biểu đồ */
+  const every = Math.max(1, Math.ceil(pts.length/12));
+  $("#lk-table").innerHTML = `<table><thead><tr><th>Năm</th><th>Vốn gốc</th><th>Tổng tài sản</th><th>Phần lãi kép</th></tr></thead><tbody>${
+    pts.filter((p,i) => i % every === 0 || i === pts.length-1).map(p =>
+      `<tr><td>${p.y}</td><td class="n">${money(p.goc)}</td><td class="n">${money(p.tong)}</td><td class="n">${money(p.tong-p.goc)}</td></tr>`).join("")
+  }</tbody></table>`;
+
+  if(typeof Chart === "undefined"){
+    if(lkChart){ lkChart.destroy(); lkChart = null; }
+    cv.hidden = true; fb.hidden = false;
+    fb.innerHTML = `<p class="empty">Chưa tải được thư viện vẽ biểu đồ (Chart.js). Bảng số bên dưới có đầy đủ đúng những con số đó.</p>`;
+    $("#lk-table").hidden = false;
+    $("#lk-togtable").textContent = "Ẩn bảng";
+    const sc = document.getElementById("chartjs-cdn");
+    if(sc && !lkChoScript){                    // chờ CDN về rồi vẽ lại, chỉ gắn một lần
+      lkChoScript = true;
+      sc.addEventListener("load", () => { if(!$("#p-lk").hidden) renderLaiKep(); }, {once:true});
+    }
+    return;
+  }
+
+  cv.hidden = false; fb.hidden = true; fb.innerHTML = "";
+  const K = lkMauSac();
+  if(lkChart){ lkChart.destroy(); lkChart = null; }
+
+  lkChart = new Chart(cv.getContext("2d"), {
+    type:"line",
+    data:{
+      labels: pts.map(p => p.y),
+      datasets:[
+        { label:"Tổng tài sản — có lãi kép", data: pts.map(p => p.tong),
+          borderColor:K.accent, backgroundColor:K.accent + "26", borderWidth:2.4,
+          fill:true, tension:.25, pointRadius:0, pointHoverRadius:5,
+          pointBackgroundColor:K.accent, pointBorderColor:K.surface, pointBorderWidth:2 },
+        { label:"Vốn gốc đã bỏ ra", data: pts.map(p => p.goc),
+          borderColor:K.ink3, borderWidth:2, borderDash:[6,4],
+          fill:false, tension:.25, pointRadius:0, pointHoverRadius:5,
+          pointBackgroundColor:K.ink3, pointBorderColor:K.surface, pointBorderWidth:2 }
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      interaction:{mode:"index", intersect:false},
+      animation:{duration: matchMedia("(prefers-reduced-motion:reduce)").matches ? 0 : 420},
+      plugins:{
+        legend:{position:"bottom", labels:{color:K.ink2, usePointStyle:true, pointStyle:"line",
+                boxWidth:26, padding:16, font:{family:"Be Vietnam Pro", size:12.5}}},
+        tooltip:{
+          backgroundColor:K.ink, titleColor:K.surface, bodyColor:K.surface,
+          borderColor:K.line, borderWidth:1, padding:10, cornerRadius:7, displayColors:true,
+          titleFont:{family:"Be Vietnam Pro", size:12.5, weight:"600"},
+          bodyFont:{family:"IBM Plex Mono", size:12},
+          callbacks:{
+            title: it => "Năm " + it[0].label,
+            label: it => " " + it.dataset.label + ": " + money(it.parsed.y),
+            afterBody: it => "Chênh lệch: " + money(pts[it[0].dataIndex].tong - pts[it[0].dataIndex].goc)
+          }
+        }
+      },
+      scales:{
+        x:{ title:{display:true, text:"năm", color:K.ink3, font:{family:"Be Vietnam Pro", size:11}},
+            grid:{display:false}, border:{color:K.line},
+            ticks:{color:K.ink3, font:{family:"IBM Plex Mono", size:11}, maxRotation:0, autoSkipPadding:14} },
+        y:{ beginAtZero:true, grid:{color:K.line}, border:{display:false},
+            ticks:{color:K.ink3, font:{family:"IBM Plex Mono", size:11}, callback: v => money(v)} }
+      }
+    }
+  });
+}
+$("#lk-togtable").addEventListener("click", () => {
+  const t = $("#lk-table"); t.hidden = !t.hidden;
+  $("#lk-togtable").textContent = t.hidden ? "Xem dạng bảng" : "Ẩn bảng";
+});
+/* Chart.js vẽ lên canvas nên không tự ăn theo CSS — đổi sáng/tối thì phải vẽ lại. */
+try{
+  matchMedia("(prefers-color-scheme:dark)").addEventListener("change", () => {
+    if(!$("#p-lk").hidden) renderLaiKep();
+  });
+}catch(e){ /* trình duyệt cũ: MediaQueryList không có addEventListener */ }
+
+/* ============================================================
+   TRỢ LÝ AI NỘI BỘ — hôm nay là bộ luật, chỗ cắm cho WebLLM đã sẵn
+   ============================================================ */
+/* generateLocalAIAnalysis là RANH GIỚI duy nhất giữa giao diện và bộ suy luận.
+   Nó bất đồng bộ và trả về một hình dạng cố định, nên khi thay ruột bằng WebLLM
+   (Llama-3 / Gemma chạy trên WebGPU) thì phần giao diện phía dưới không phải sửa gì:
+
+     { engine: "…",            // tên bộ suy luận, hiện lên dưới nút bấm
+       doan:   ["đoạn 1", …],  // HTML đã an toàn, mỗi phần tử là một đoạn văn
+       thieu:  ["P/E", …] }    // những ô còn trống, để nhắc người dùng
+
+   Bộ luật bên dưới KHÔNG chấm điểm lại. Nó chỉ đọc kết quả của scoreScreen() —
+   nguồn sự thật duy nhất, gồm cả ma trận ngân hàng và toàn bộ cờ đỏ — rồi diễn
+   giải thành lời. Nhờ vậy hai chỗ không bao giờ nói vênh nhau. */
+
+/* Máy có chạy nổi mô hình trong trình duyệt không. Chỉ để hiện trạng thái. */
+function aiKhaNang(){
+  const gpu = typeof navigator !== "undefined" && "gpu" in navigator;
+  return {webgpu:gpu, nhan: gpu ? "Máy này có WebGPU — sẵn sàng cho mô hình chạy nội bộ."
+                                : "Máy này chưa bật WebGPU. Bộ luật nội bộ vẫn chạy bình thường."};
+}
+
+async function generateLocalAIAnalysis(metrics){
+  /* ---- CHỖ CẮM WEBLLM ----
+     Khi nạp WebLLM, thay đúng khối này và giữ nguyên hình dạng trả về:
+
+       if(window.CreateMLCEngine && metrics.dungMoHinh){
+         const engine = await CreateMLCEngine("Llama-3.2-3B-Instruct-q4f16_1-MLC");
+         const res = await engine.chat.completions.create({
+           messages:[{role:"system", content:AI_SYSTEM}, {role:"user", content:aiMoTa(metrics)}]
+         });
+         return {engine:"Llama-3.2-3B · WebGPU", doan:[esc(res.choices[0].message.content)], thieu:metrics.thieu};
+       }
+
+     Lưu ý trước khi bật: mô hình nặng vài trăm MB tới vài GB, tải từ CDN của
+     HuggingFace. Việc đó phá vỡ lời hứa "không gọi ra ngoài" đang in trong tab
+     Dữ liệu, nên phải hỏi người dùng trước và sửa lại đoạn cam kết đó cho đúng. */
+
+  const {v, m, ey, flags, scr, BANK} = metrics;
+  const doan = [], thieu = metrics.thieu.slice();
+  const pc = x => x === null ? null : Math.round(x);
+
+  /* đoạn 1 — hai luồng đứng ở đâu */
+  if(v.pct === null || m.pct === null){
+    doan.push("Chưa đủ số để nói gì chắc chắn. Bộ lọc cần ít nhất một ô ở luồng giá trị và một ô ở luồng động lượng thì mới so được hai tín hiệu với nhau.");
+  } else {
+    const hi = x => x >= 60;
+    const gv = hi(v.pct), gm = hi(m.pct);
+    let cau = `Luồng giá trị đạt <strong>${pc(v.pct)}%</strong> (${v.got}/${v.max} điểm), luồng động lượng đạt <strong>${pc(m.pct)}%</strong> (${m.got}/${m.max} điểm). `;
+    if(gv && gm)       cau += "Hai luồng cùng hướng lên. Đây là trường hợp dễ khiến người ta tự tin quá mức: khi mọi con số đều đẹp, thứ duy nhất còn lại có thể sai là những gì bộ lọc không đo được.";
+    else if(gv && !gm) cau += "Rẻ nhưng chưa chạy. Nếu bạn tin vào số liệu nền tảng thì đây là kiểu mã đòi hỏi kiên nhẫn, và kiên nhẫn thì không có hạn định — hãy tự hỏi bạn chịu được bao lâu nếu nó tiếp tục đứng yên thêm hai năm nữa.";
+    else if(!gv && gm) cau += "Đang chạy nhưng không còn rẻ. Phần lớn mức tăng đã nằm trong giá; luận điểm của bạn lúc này thực chất là đặt cược vào dòng tiền và câu chuyện, không phải vào định giá.";
+    else               cau += "Cả hai luồng đều yếu. Không có gì bắt buộc bạn phải mua thứ gì cả — đứng ngoài cũng là một vị thế, và là vị thế duy nhất không mất tiền.";
+    doan.push(cau);
+  }
+
+  /* đoạn 2 — cờ đỏ, nặng trước nhẹ sau */
+  const crit = flags.filter(f => f[0] === "crit"), warn = flags.filter(f => f[0] === "warn");
+  if(crit.length){
+    doan.push(`Có <strong>${crit.length} cảnh báo mức nghiêm trọng</strong>. Một cảnh báo nghiêm trọng không tự động biến điểm số ở trên thành vô nghĩa, nhưng nó là thứ bạn phải giải thích được trước khi bỏ tiền vào — nếu chưa giải thích nổi thì bạn chưa hiểu mã này đủ để mua nó.`);
+  } else if(warn.length){
+    doan.push(`Không có cảnh báo nghiêm trọng, nhưng có <strong>${warn.length} điểm cần lưu ý</strong>. Chúng chưa đủ để dừng lại, đủ để bạn đọc kỹ trước khi đi tiếp.`);
+  } else {
+    doan.push("Không có cảnh báo nào bật lên từ những con số đã nhập. Điều đó chỉ có nghĩa là bộ lọc không thấy vấn đề <em>trong phạm vi nó kiểm tra được</em> — không có nghĩa là không có rủi ro.");
+  }
+
+  /* đoạn 3 — mâu thuẫn cụ thể, thứ đáng giá nhất mà bộ lọc tìm ra */
+  const mau = [];
+  if(scHas(scr.pe) && scr.pe > 0 && scHas(scr.deposit) && ey !== null && ey < scr.deposit)
+    mau.push(`lợi suất lợi nhuận ${ey.toFixed(1)}% thấp hơn lãi gửi ngân hàng ${scr.deposit.toFixed(1)}% — bạn đang gánh toàn bộ rủi ro cổ phiếu để lấy về ít hơn tiền gửi`);
+  if(scr.ftse && scHas(scr.froom) && scr.froom < 5)
+    mau.push("luận điểm dựa vào dòng tiền khối ngoại trong khi room ngoại gần kín — hai điều này không thể cùng đúng");
+  if(BANK && scHas(scr.pb) && scr.pb < 0.8 && scHas(scr.npl) && scr.npl > 3)
+    mau.push("P/B dưới sổ sách đi cùng nợ xấu trên 3% — thị trường đang định giá thấp sổ cho vay, và số liệu nợ xấu cho thấy thị trường có lý do");
+  if(BANK && scHas(scr.pcr) && scr.pcr < 80 && scHas(scr.npl) && scr.npl > 2)
+    mau.push("nợ xấu đã trên 2% mà bao phủ chưa tới 80% — phần chưa trích lập đang nằm trong lợi nhuận hôm nay");
+  if(scHas(scr.chg12) && scr.chg12 > 80 && scHas(scr.pe) && scr.pe > 18)
+    mau.push("giá đã tăng hơn 80% trong 12 tháng và P/E vẫn trên 18 — bắt đầu DCA ở đây là mua vào gần đỉnh một đợt tăng");
+  if(mau.length)
+    doan.push("Những chỗ tự mâu thuẫn với nhau, đáng chú ý nhất: " + mau.join("; ") + ".");
+
+  /* đoạn 4 — còn thiếu gì */
+  if(thieu.length)
+    doan.push(`Còn <strong>${thieu.length}</strong> ô chưa nhập: ${thieu.join(" · ")}. Mỗi ô trống làm mẫu số co lại, nên tỷ lệ phần trăm ở trên đang tính trên ít tiêu chí hơn bạn tưởng.`);
+
+  /* đoạn 5 — giới hạn, luôn nói, không bao giờ bỏ */
+  doan.push(BANK
+    ? "<em>Giới hạn.</em> Kể cả khi CAR, nợ xấu và bao phủ đều đạt, bộ luật này vẫn không thấy được mức độ tập trung danh mục cho vay, tỷ trọng cho vay bất động sản, nợ tái cơ cấu chưa chuyển nhóm, hay cho vay bên liên quan. Đó mới là những thứ làm sập một ngân hàng."
+    : "<em>Giới hạn.</em> Bộ luật này không kiểm chứng được số liệu bạn nhập, không biết gì về ngành, ban lãnh đạo hay chất lượng lợi nhuận, và không dự báo giá. Nó chỉ đọc lại chính những con số của bạn cho mạch lạc hơn.");
+
+  return {engine:"Bộ luật nội bộ · chạy hoàn toàn trong máy bạn", doan, thieu};
+}
+
+function renderAIBox(){
+  const kn = aiKhaNang();
+  $("#ai-engine").innerHTML = kn.nhan + " Không có số liệu nào rời khỏi máy — kể cả khi bạn bấm nút.";
+}
+
+$("#ai-run").addEventListener("click", async () => {
+  const btn = $("#ai-run"), out = $("#ai-out");
+  btn.disabled = true; btn.textContent = "Đang đọc…";
+  try{
+    const r = scoreScreen(), p = S.scr;
+    /* ô nào chưa nhập — lấy đúng theo ngành đang chọn */
+    const nhan = {cap:"Vốn hoá", pe:"P/E", pb:"P/B", roe:"ROE", de:"Nợ vay / Vốn chủ",
+                  car:"CAR", npl:"Nợ xấu", pcr:"Bao phủ nợ xấu",
+                  froom:"Room ngoại", chg12:"Đà giá 12 tháng", deposit:"Lãi tiết kiệm"};
+    const BANK = p.sector === "bank";
+    const canCo = ["cap","pe","pb","roe", ...(BANK ? ["car","npl","pcr"] : ["de"]), "froom","chg12","deposit"];
+    const thieu = canCo.filter(k => !scHas(p[k])).map(k => nhan[k]);
+
+    const kq = await generateLocalAIAnalysis({...r, scr:p, BANK, thieu});
+
+    out.hidden = false;
+    out.innerHTML = `<div style="border-top:1px solid var(--line);padding-top:13px">` +
+      kq.doan.map(d => `<p style="font-size:14.5px;color:var(--ink2);line-height:1.68;font-family:'Source Serif 4',serif;margin-bottom:11px">${d}</p>`).join("") +
+      `<div class="note" style="margin-top:2px">${esc(kq.engine)} · đọc lại đúng ${r.V.length + r.M.length} tiêu chí và ${r.flags.length} cảnh báo ở trên. Đây <strong>không phải lời khuyên đầu tư</strong>.</div></div>`;
+  }catch(e){
+    out.hidden = false;
+    out.innerHTML = `<p class="empty">Không chạy được bộ suy luận. Điểm số và cảnh báo ở trên vẫn đúng và không phụ thuộc vào phần này.</p>`;
+  }finally{
+    btn.disabled = false; btn.textContent = "Viết nhận xét";
+  }
+});
+
+/* ============================================================
+   SỐ LIỆU TỰ ĐỘNG — đọc data.json trước khi bắt người dùng gõ tay
+   ============================================================ */
+/* data.json do GitHub Actions dựng lại mỗi chiều sau phiên (scraper.py).
+   Nó chỉ chứa số liệu công khai của thị trường, không có gì của người dùng.
+   Không có tệp, mạng hỏng, hay mở bằng file:// — app chạy y như trước. */
+let AUTO = null;
+
+async function napDuLieuTuDong(){
+  const st = $("#auto-status");
+  if(location.protocol === "file:"){
+    st.textContent = "Đang mở bằng file:// nên không đọc được tệp số liệu. Bản trên web có số liệu tự động; ở đây bạn nhập tay như bình thường.";
+    return;
+  }
+  st.textContent = "Đang kiểm tra…";
+  try{
+    const res = await fetch("./data.json", {cache:"no-store"});
+    if(!res.ok) throw new Error("HTTP " + res.status);
+    const d = await res.json();
+    if(!d || typeof d !== "object" || !d.ma) throw new Error("Tệp sai định dạng");
+    AUTO = d;
+    const n = Object.keys(d.ma).length;
+    st.innerHTML = `Có số liệu của <strong>${n}</strong> mã, phiên <strong>${esc(d.phien || "—")}</strong>, cập nhật ${esc(d.capNhat || "—")}. Nguồn: ${esc(d.nguon || "—")}.` +
+      (d.khongLayDuoc && d.khongLayDuoc.length
+        ? ` Những chỉ số <strong>không</strong> lấy tự động được và vẫn phải nhập tay: ${d.khongLayDuoc.map(esc).join(" · ")}.`
+        : "");
+    /* gợi ý mã trong ô nhập của tab Bộ lọc */
+    $("#sc-macolist").innerHTML = Object.keys(d.ma).sort()
+      .map(k => `<option value="${esc(k)}">${esc(d.ma[k].ten || "")}</option>`).join("");
+    if(scHas(d.laiTietKiem) && !scHas(S.scr.deposit)){
+      S.scr.deposit = d.laiTietKiem; save();
+    }
+    renderAutoBar();
+  }catch(e){
+    AUTO = null;
+    st.textContent = "Chưa có tệp số liệu tự động (" + e.message + "). Bộ lọc vẫn dùng được bình thường — bạn nhập tay như trước.";
+    renderAutoBar();
+  }
+}
+
+const LK_AUTO_KEYS = ["cap","pe","pb","roe","de","car","npl","pcr","froom","chg12"];
+const AUTO_NHAN = {cap:"Vốn hoá", pe:"P/E", pb:"P/B", roe:"ROE", de:"Nợ vay / Vốn chủ",
+                   car:"CAR", npl:"Nợ xấu", pcr:"Bao phủ nợ xấu",
+                   froom:"Room ngoại", chg12:"Đà giá 12 tháng"};
+
+/* Thanh gợi ý nằm ngay dưới ô mã trong tab Bộ lọc. */
+function renderAutoBar(){
+  const bar = $("#sc-auto");
+  const ma = (S.scr.ticker || "").trim().toUpperCase();
+  const d = AUTO && ma && AUTO.ma[ma];
+  if(!d){ bar.hidden = true; bar.innerHTML = ""; return; }
+
+  const co = LK_AUTO_KEYS.filter(k => scHas(d[k]));
+  bar.hidden = false;
+  bar.innerHTML = `<div class="card pad" style="margin-top:12px;border-left:3px solid var(--accent)">
+    <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap">
+      <div style="flex:1;min-width:220px">
+        <div class="eyebrow">Có sẵn số liệu</div>
+        <h4 style="font-size:15px;margin:5px 0 3px">${esc(ma)}${d.ten ? " — " + esc(d.ten) : ""}</h4>
+        <p style="font-size:13px;color:var(--ink2);line-height:1.6">Phiên ${esc(AUTO.phien || "—")}. Điền sẵn được <strong>${co.length}</strong> ô: ${co.map(k => esc(AUTO_NHAN[k])).join(" · ")}. Những ô còn lại vẫn phải bạn nhập.</p>
+      </div>
+      <button class="btn primary" id="sc-autofill" type="button">Điền vào bộ lọc</button>
+    </div>
+  </div>`;
+  $("#sc-autofill").addEventListener("click", () => dienTuDong(ma));
+}
+
+function dienTuDong(ma){
+  const d = AUTO && AUTO.ma[ma];
+  if(!d) return;
+  if(d.nganh === "bank" || d.nganh === "normal") S.scr.sector = d.nganh;
+  let n = 0;
+  LK_AUTO_KEYS.forEach(k => { if(scHas(d[k])){ S.scr[k] = d[k]; n++; } });
+  save();
+  applySector();
+  buildScrFields("#scf-v", SCR_V);
+  buildScrFields("#scf-m", SCR_M);
+  buildScrFields("#scf-r", SCR_R);
+  renderScreen();
+  toast(`Đã điền ${n} ô từ số liệu phiên ${AUTO.phien || "gần nhất"}. Hãy tự đối chiếu lại trước khi tin.`);
+}
+
+$("#auto-reload").addEventListener("click", napDuLieuTuDong);
+
 function renderAll(){
   buildFields("#f1", FIELDS_1);
   buildFields("#f2", FIELDS_2);
@@ -4155,12 +4643,13 @@ function renderAll(){
   renderScreen();
   renderMap(); renderKB(); renderLevels();
   renderSrcs(); renderLessons(); renderIkigai(); buildDcaFields(); buildNhaFields();
+  buildLkFields(); renderLaiKep(); renderAIBox();
   showTpane(); renderTuSoi();
   $("#tudo-so").value = S.tuDo.so; $("#tudo-ghi").value = S.tuDo.ghi; $("#tiec-box").value = S.tiec;
   renderNumbers(); drawChart();
 }
 $("#i-cow").addEventListener("input", renderCows);
-$("#sc-ticker").addEventListener("input", e => { S.scr.ticker = e.target.value.trim().toUpperCase().slice(0,12); save(); });
+$("#sc-ticker").addEventListener("input", e => { S.scr.ticker = e.target.value.trim().toUpperCase().slice(0,12); save(); renderAutoBar(); });
 $("#sc-ftse").addEventListener("change", e => { S.scr.ftse = e.target.checked; save(); renderScreen(); });
 $("#sc-sector").addEventListener("click", e => {
   const b = e.target.closest("button[data-sec]"); if(!b || b.dataset.sec === S.scr.sector) return;
@@ -4172,6 +4661,7 @@ $("#tiec-box").addEventListener("input", e => { S.tiec = e.target.value; save();
 const now = new Date();
 $("#lg-date").value = now.getFullYear() + "-" + String(now.getMonth()+1).padStart(2,"0");
 renderAll();
+napDuLieuTuDong();   // không chặn gì cả — có tệp thì tốt, không có thì thôi
 window.addEventListener("resize", () => { if(!$("#p-track").hidden) drawChart(); });
 renderNhacSaoLuu();
 

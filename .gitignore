@@ -28,3 +28,7 @@ Thumbs.db
 
 # Đề phòng: file sao lưu dữ liệu cá nhân không bao giờ được đẩy lên.
 la-ban-tu-do-tai-chinh-*.json
+
+# vnstock tự ghi tệp này vào thư mục gốc mỗi khi được import. Nó là tài liệu
+# hướng dẫn của thư viện, không phải của dự án — giữ ngoài repo.
+AGENTS.md
