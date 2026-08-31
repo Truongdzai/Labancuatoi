@@ -43,6 +43,8 @@ const NAMES = [
   "dca", "laiKep",
   // A2 · trợ lý AI nội bộ — hai hàm gác cổng cho chữ do mô hình sinh ra
   "baCau", "hopLeCau",
+  // v3 · bộ lọc nâng cấp
+  "scoreScreen",
   // A1-6 · mua vs thuê
   "pmt", "soSanhMuaThue", "diemHoaVon",
   // A1-1 · ngân sách 50/30/20
@@ -54,6 +56,13 @@ const NAMES = [
 const ctx = vm.createContext({});
 const missing = [];
 const srcs = ["const num = v => { const x = parseFloat(v); return isFinite(x) ? x : 0; };"];
+
+/* scoreScreen đọc vài thứ ở phạm vi ngoài (scHas, PHAN_BU_RUI_RO, S.scr khi gọi
+   không tham số). Dựng sẵn ở đây để chấm được bộ số bất kỳ mà không cần trình duyệt. */
+srcs.push('const scHas = v => v !== null && v !== undefined && isFinite(v);');
+const mPB = js.match(/const PHAN_BU_RUI_RO = \d+;/);
+if (mPB) srcs.push(mPB[0]); else missing.push("PHAN_BU_RUI_RO");
+srcs.push('const S = { scr: {} };');
 for (const c of CONSTS) {
   const s = grabConst(c);
   if (s) srcs.push(s); else missing.push(c);
@@ -212,6 +221,103 @@ t("còn sót markdown thì loại", ["hopLeCau"], () =>
   truthy(!F.hopLeCau("**" + DAI), "phải loại"));
 t("chuỗi rỗng thì loại", ["hopLeCau"], () => {
   truthy(!F.hopLeCau(""), "rỗng phải loại"); truthy(!F.hopLeCau(null), "null phải loại");
+});
+
+/* ============================================================
+   V3 · BỘ LỌC NÂNG CẤP — dòng tiền, NIM, biên an toàn
+   ============================================================ */
+/* Bộ số nền: doanh nghiệp thường lành mạnh. Từng test chỉ đổi đúng một ô để biết
+   chắc thay đổi nào gây ra kết quả nào. */
+const CB = (o) => Object.assign({
+  ticker: "TEST", sector: "normal", cap: 20000, pe: 12, pb: 1.2, roe: 16,
+  de: 0.4, fcf: null, cfoni: null,
+  car: null, npl: null, pcr: null, npl1: null, npl2: null,
+  nim: null, nim1: null, nim2: null,
+  froom: 25, chg12: 10, deposit: 5.5, ftse: false
+}, o || {});
+const coCo = (r, mau) => r.flags.some(f => f[1].includes(mau));
+const timTC = (r, ten) => [...r.V, ...r.M].find(x => x.name === ten);
+
+group("v3 · lợi suất dòng tiền tự do");
+t("FCF dương mạnh → 2 điểm", ["scoreScreen"], () =>
+  eq(timTC(F.scoreScreen(CB({ fcf: 2000 })), "Lợi suất dòng tiền tự do").pt, 2));
+t("FCF âm → 0 điểm và cờ đỏ nặng", ["scoreScreen"], () => {
+  const r = F.scoreScreen(CB({ fcf: -8382 }));
+  eq(timTC(r, "Lợi suất dòng tiền tự do").pt, 0);
+  truthy(coCo(r, "Dòng tiền tự do âm"), "phải bắn cờ đốt tiền");
+});
+t("ca HPG thật: P/E 13, ROE 12 vẫn đẹp nhưng FCF âm", ["scoreScreen"], () => {
+  const r = F.scoreScreen(CB({ cap: 186590, pe: 13.05, pb: 1.69, roe: 12.02, fcf: -8382, cfoni: 1.12 }));
+  truthy(timTC(r, "P/E").pt >= 1, "P/E vẫn phải được điểm");
+  truthy(coCo(r, "Dòng tiền tự do âm"), "nhưng dòng tiền phải bị bắt");
+});
+t("bỏ trống thì không chấm, không bịa điểm", ["scoreScreen"], () =>
+  eq(timTC(F.scoreScreen(CB({})), "Lợi suất dòng tiền tự do").pt, null));
+
+group("v3 · chất lượng lợi nhuận");
+t("dòng tiền ≥ lợi nhuận → 2 điểm", ["scoreScreen"], () =>
+  eq(timTC(F.scoreScreen(CB({ cfoni: 1.2 })), "Dòng tiền / Lợi nhuận").pt, 2));
+t("dưới 0,7 → cờ cảnh báo", ["scoreScreen"], () =>
+  truthy(coCo(F.scoreScreen(CB({ cfoni: 0.4 })), "dưới 70% lợi nhuận"), "phải cảnh báo"));
+t("dòng tiền âm mà vẫn báo lãi → cờ đỏ nặng", ["scoreScreen"], () =>
+  truthy(coCo(F.scoreScreen(CB({ cfoni: -0.5 })), "âm trong khi vẫn báo lãi"), "phải bắn cờ nặng"));
+
+group("v3 · NIM ngân hàng");
+const NH = (o) => CB(Object.assign({ sector: "bank", de: null, car: 11, npl: 1.8, pcr: 120 }, o));
+t("NIM co hai quý liên tiếp → cờ đỏ nặng", ["scoreScreen"], () =>
+  truthy(coCo(F.scoreScreen(NH({ nim: 1.33, nim1: 1.39, nim2: 1.42 })), "co lại hai quý liên tiếp"),
+    "đúng bộ số VPB thật, phải bắn cờ"));
+t("thứ tự quý bị đảo thì KHÔNG được bắn cờ", ["scoreScreen"], () =>
+  truthy(!coCo(F.scoreScreen(NH({ nim: 1.33, nim1: 1.42, nim2: 1.39 })), "co lại hai quý liên tiếp"),
+    "đây chính là lỗi sắp cột từng gặp — giữ test để không tái phát"));
+t("NIM nở hai quý → cảnh báo nhẹ về chất lượng tăng trưởng", ["scoreScreen"], () =>
+  truthy(coCo(F.scoreScreen(NH({ nim: 1.5, nim1: 1.4, nim2: 1.3 })), "nở ra hai quý liên tiếp"), "phải nhắc"));
+t("ngân hàng không bị chấm hai ô dòng tiền", ["scoreScreen"], () => {
+  const r = F.scoreScreen(NH({ fcf: -9999, cfoni: -2 }));
+  truthy(!timTC(r, "Lợi suất dòng tiền tự do"), "ngân hàng không được có ô FCF");
+  truthy(!coCo(r, "Dòng tiền tự do âm"), "và không được bắn cờ dòng tiền");
+});
+
+group("v3 · biên an toàn");
+t("lợi suất cao hơn mức yêu cầu → biên dương", ["scoreScreen"], () => {
+  const r = F.scoreScreen(CB({ pe: 5, deposit: 5 }));   // ey = 20%, yêu cầu = 10%
+  approx(r.mos.bien, 50, 0.5);
+});
+t("đắt → biên âm và bắn cờ", ["scoreScreen"], () => {
+  const r = F.scoreScreen(CB({ pe: 40, deposit: 5.5 }));  // ey = 2,5% << 10,5%
+  truthy(r.mos.bien < -100, "phải âm sâu");
+  truthy(coCo(r, "Biên an toàn âm sâu"), "phải bắn cờ");
+});
+t("ưu tiên dòng tiền tự do hơn lợi nhuận kế toán", ["scoreScreen"], () => {
+  const r = F.scoreScreen(CB({ cap: 10000, fcf: 1500, pe: 40 }));  // FCF yield 15% vs ey 2,5%
+  eq(r.mos.nguon, "dòng tiền tự do");
+  approx(r.mos.loiSuat, 15, 1e-9);
+});
+t("ngân hàng luôn dùng lợi nhuận kế toán", ["scoreScreen"], () => {
+  const r = F.scoreScreen(NH({ pe: 10, fcf: 5000, cap: 10000 }));
+  eq(r.mos.nguon, "lợi nhuận kế toán");
+});
+t("thiếu số thì trả null chứ không đoán", ["scoreScreen"], () =>
+  eq(F.scoreScreen(CB({ pe: null })).mos, null));
+
+group("v3 · sửa lỗi chấm điểm FTSE");
+t("ô FTSE chỉ còn tối đa 1 điểm", ["scoreScreen"], () =>
+  eq(timTC(F.scoreScreen(CB({ ftse: true })), "Ứng viên nâng hạng FTSE").max, 1));
+t("không còn chiếm một phần ba luồng động lượng", ["scoreScreen"], () => {
+  const r = F.scoreScreen(CB({ ftse: true }));
+  truthy(r.m.max === 5, "động lượng tối đa phải là 5 — nhận " + r.m.max);
+});
+
+group("v3 · scoreScreen chấm được bộ số bất kỳ (điều kiện của bảng xếp hạng)");
+t("hai bộ số khác nhau cho hai kết quả khác nhau", ["scoreScreen"], () => {
+  const a = F.scoreScreen(CB({ pe: 6 })), b = F.scoreScreen(CB({ pe: 40 }));
+  truthy(a.v.pct > b.v.pct, "mã rẻ phải có điểm giá trị cao hơn");
+});
+t("19 luật gốc vẫn bắn đúng trong chế độ ngân hàng", ["scoreScreen"], () => {
+  const r = F.scoreScreen(NH({ car: 8, npl: 3.6, pcr: 45, npl1: 3.1, npl2: 2.7, froom: 0.3, ftse: true }));
+  for (const s of ["CAR dưới 9%", "Tỷ lệ nợ xấu trên 3%", "Tỷ lệ bao phủ nợ xấu dưới 50%",
+                   "hai quý liên tiếp", "Room ngoại đã gần kín", "Mâu thuẫn trực tiếp"])
+    truthy(coCo(r, s), "mất cờ đỏ gốc: " + s);
 });
 
 /* ============================================================

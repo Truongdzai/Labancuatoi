@@ -27,6 +27,17 @@ NHỮNG GÌ LẤY ĐƯỢC VÀ KHÔNG LẤY ĐƯỢC
                       phần còn lại chưa dùng
     Nợ vay/Vốn chủ ✗  chỉ có ở nguồn VCI đã cũ, không đáng tin để tự điền
 
+Bổ sung cho bộ lọc v3 (kiểm chứng 31/08/2026):
+
+    Dòng tiền tự do ✓  báo cáo lưu chuyển tiền tệ VCI, năm gần nhất:
+                       tiền thuần từ kinh doanh CỘNG chi mua sắm TSCĐ (số đã âm sẵn)
+    DTKD / LNST     ✓  cùng nguồn, chia cho lợi nhuận sau thuế trong báo cáo KQKD
+    NIM ba quý      ✓  chỉ số KBS, trường net_interest_margin_nim, còn cập nhật
+
+Hai ô dòng tiền CHỈ tính cho doanh nghiệp thường. Báo cáo lưu chuyển tiền tệ của
+ngân hàng không so sánh được: cho vay ra bị ghi thành dòng tiền âm, nên một ngân
+hàng tăng trưởng tốt lại hiện ra như đang đốt tiền.
+
 Ô nào không lấy được thì ghi null và app sẽ để người dùng tự nhập. Thà để
 trống còn hơn điền một con số của năm 2018 rồi để người ta tưởng là số hôm nay.
 """
@@ -40,6 +51,7 @@ import os
 import sys
 import time
 import warnings
+from concurrent import futures
 from datetime import datetime, timedelta, timezone
 
 warnings.filterwarnings("ignore")
@@ -87,16 +99,32 @@ def log(*a):
 
 
 def goi(mo_ta, ham, *a, **kw):
-    """Gọi một hàm lấy dữ liệu, nuốt mọi lỗi, và chờ khi bị chặn tốc độ.
+    """Gọi một hàm lấy dữ liệu, nuốt mọi lỗi, chờ khi bị chặn, và BỎ khi treo.
 
-    vnstock giới hạn số lượt gọi mỗi phút ở tài khoản thường. Khi chạm trần nó
-    không ném Exception bình thường mà gọi thẳng sys.exit — tức là ném SystemExit,
-    và `except Exception` KHÔNG bắt được. Phải bắt cả hai, nếu không cả tiến trình
-    chết giữa chừng và ta mất luôn những mã đã lấy xong.
+    Ba lớp bảo vệ, mỗi lớp sinh ra từ một lần hỏng thật:
+
+    1. vnstock giới hạn số lượt gọi mỗi phút ở tài khoản thường. Khi chạm trần nó
+       không ném Exception bình thường mà gọi thẳng sys.exit — tức là ném
+       SystemExit, và `except Exception` KHÔNG bắt được. Phải bắt cả hai, nếu
+       không cả tiến trình chết giữa chừng và ta mất luôn những mã đã lấy xong.
+
+    2. Chạm trần thì nghỉ một nhịp rồi thử lại đúng một lần.
+
+    3. QUAN TRỌNG NHẤT: vnstock có thể TREO HẲN, không ném lỗi, không trả về gì.
+       Quan sát thật ngày 31/08/2026: tiến trình đứng im hơn mười phút ở mã GAS,
+       không thêm một dòng log nào. Bọc try/except không cứu được vì có lỗi nào
+       đâu mà bắt. Nên mỗi lời gọi phải chạy trong luồng riêng có hạn giờ; quá
+       hạn thì bỏ mã đó và đi tiếp. Một mã thiếu số còn hơn cả mẻ chết cứng, và
+       trên GitHub Actions thì treo đồng nghĩa với đốt trọn timeout của job.
     """
     for lan in range(2):
         try:
-            return ham(*a, **kw)
+            with futures.ThreadPoolExecutor(max_workers=1) as bom:
+                return bom.submit(ham, *a, **kw).result(timeout=HAN_MOI_LOI_GOI)
+        except futures.TimeoutError:
+            # Luồng kia có thể vẫn còn chạy; nó là daemon nên không giữ tiến trình lại.
+            log("  ! %s treo quá %ds — bỏ qua" % (mo_ta, HAN_MOI_LOI_GOI))
+            return None
         except (Exception, SystemExit) as e:
             dau = (str(e) + " " + type(e).__name__).lower()
             chan = any(k in dau for k in ("rate limit", "giới hạn", "too many", "429"))
@@ -110,6 +138,7 @@ def goi(mo_ta, ham, *a, **kw):
 
 
 NGHI_KHI_CHAN = 65        # giây chờ sau khi chạm trần tốc độ — cửa sổ giới hạn là 1 phút
+HAN_MOI_LOI_GOI = 90      # giây tối đa cho MỘT lời gọi, chống treo vô hạn
 
 
 # ----------------------------------------------------------------------------
@@ -157,7 +186,8 @@ def chi_so_kbs(ma):
     ky = [c for c in r.columns if c not in ("item", "item_id", "item_en")]
     if not ky:
         return {}, None
-    cot = ky[0]                       # cột đầu là kỳ mới nhất
+    # KBS không trả cột theo thứ tự thời gian — xem cot_theo_thoi_gian()
+    cot = cot_theo_thoi_gian(ky)[0]
     lay = dict(zip(r["item_id"], r[cot]))
     return {
         "pe": so(lay.get("pe_ratio")),
@@ -221,6 +251,103 @@ def chi_so_ngan_hang(ma):
     }, nhan
 
 
+def dong_tien(ma):
+    """Dòng tiền tự do và tỷ lệ dòng tiền trên lợi nhuận — doanh nghiệp thường.
+
+    FCF = tiền thuần từ hoạt động kinh doanh + chi mua sắm tài sản cố định.
+    Dấu cộng là đúng: nguồn trả về khoản chi dưới dạng SỐ ÂM sẵn rồi.
+    """
+    from vnstock.api.financial import Finance
+
+    f = Finance(symbol=ma, source="VCI")
+    cf = f.cash_flow(period="year", lang="en", dropna=True)
+    ky = [c for c in cf.columns if c not in ("item", "item_en", "item_id")]
+    if not ky:
+        return {"fcf": None, "cfoni": None}
+    cot = ky[0]                                   # cột đầu là năm gần nhất
+    lay = dict(zip(cf["item_id"], cf[cot]))
+
+    cfo = so(lay.get("net_cash_inflows_outflows_from_operating_activities"), 0)
+    capex = so(lay.get("purchases_of_fixed_assets_and_other_long_term_assets"), 0)
+    if cfo is None:
+        return {"fcf": None, "cfoni": None}
+
+    fcf = cfo + (capex or 0)
+
+    # lợi nhuận sau thuế để tính chất lượng lợi nhuận
+    lnst = None
+    try:
+        inc = f.income_statement(period="year", lang="en", dropna=True)
+        kyi = [c for c in inc.columns if c not in ("item", "item_en", "item_id")]
+        if kyi:
+            di = dict(zip(inc["item_id"], inc[kyi[0]]))
+            for k in ("post_tax_profit", "profit_after_tax", "net_profit_for_the_year",
+                      "attributable_to_parent_company"):
+                if di.get(k) is not None:
+                    lnst = so(di[k], 0)
+                    if lnst:
+                        break
+    except Exception as e:
+        log("  ! báo cáo KQKD hỏng:", type(e).__name__, str(e)[:100])
+
+    return {
+        # quy về TỶ đồng cho khớp ô nhập trong app
+        "fcf": so(fcf / 1e9, 0),
+        "cfoni": so(cfo / lnst, 2) if (lnst and lnst > 0) else None,
+    }
+
+
+def cot_theo_thoi_gian(cols):
+    """Sắp cột kỳ báo cáo theo thứ tự thời gian, MỚI NHẤT TRƯỚC.
+
+    Bắt buộc phải có. KBS trả về cột KHÔNG theo thứ tự — quan sát thật ngày
+    31/08/2026 với VPB: ['2026-Q2', '2025-Q4', '2026-Q1', '2025-Q4_1']. Nếu cứ
+    lấy theo thứ tự nguồn trả thì NIM ba quý ra 1,33 · 1,42 · 1,39, tức là quý
+    giữa và quý cuối bị đảo. Hậu quả không phải sai số nhỏ: phép kiểm tra "NIM co
+    lại hai quý liên tiếp" sẽ không bao giờ đúng, và cờ đỏ quan trọng nhất của
+    chế độ ngân hàng im lặng vĩnh viễn. Đúng thứ tự phải là 1,33 · 1,39 · 1,42.
+
+    Cũng loại luôn cột trùng tên kiểu "2025-Q4_1" mà nguồn hay kèm theo.
+    """
+    import re
+
+    seen, sach = set(), []
+    for c in cols:
+        ten = str(c).split("_")[0]
+        if ten in seen:
+            continue
+        seen.add(ten)
+        m = re.match(r"^(\d{4})[-–]?Q?(\d)?", ten)
+        khoa = (int(m.group(1)), int(m.group(2) or 0)) if m else (0, 0)
+        sach.append((khoa, c))
+    sach.sort(key=lambda x: x[0], reverse=True)
+    return [c for _, c in sach]
+
+
+def nim_ba_quy(ma):
+    """NIM ba quý gần nhất — chỉ ngân hàng. Nguồn KBS còn cập nhật tới quý hiện tại."""
+    from vnstock.api.financial import Finance
+
+    r = Finance(symbol=ma, source="KBS").ratio(
+        period="quarter", lang="en", dropna=True, flatten_columns=True
+    )
+    ky = [c for c in r.columns if c not in ("item", "item_id", "item_en")]
+    if not ky:
+        return {}
+    sach = cot_theo_thoi_gian(ky)
+
+    def val(cot):
+        d = dict(zip(r["item_id"], r[cot]))
+        return so(d.get("net_interest_margin_nim"))
+
+    out = {}
+    for i, k in enumerate(sach[:3]):
+        v = val(k)
+        if v is not None:
+            out[["nim", "nim1", "nim2"][i]] = v
+    return out
+
+
 def da_gia_12_thang(ma):
     """Phần trăm thay đổi giá 12 tháng, tự tính từ lịch sử giá."""
     from vnstock.api.quote import Quote
@@ -273,7 +400,9 @@ def thu_thap(ma_list, nghi):
             "cap": g.get("cap"),
             "pe": None, "pb": None, "roe": None,
             "de": None,                       # chưa có nguồn đáng tin — để người dùng nhập
+            "fcf": None, "cfoni": None,       # v3 · dòng tiền, chỉ doanh nghiệp thường
             "car": None, "npl": None, "pcr": None,
+            "nim": None, "nim1": None, "nim2": None,
             "froom": None,                    # bảng giá không có phần room còn lại
             "chg12": None,
         }
@@ -288,14 +417,27 @@ def thu_thap(ma_list, nghi):
             if r:
                 d.update(r[0])
                 d["kyNganHang"] = r[1]
+            nim = goi("NIM " + ma, nim_ba_quy, ma)
+            if nim:
+                d.update(nim)
+        else:
+            # Dòng tiền chỉ có nghĩa với doanh nghiệp thường — xem ghi chú đầu tệp.
+            dt = goi("dòng tiền " + ma, dong_tien, ma)
+            if dt:
+                d.update(dt)
 
         d["chg12"] = goi("đà giá " + ma, da_gia_12_thang, ma)
 
         # ô nào null thì nói thẳng ra, app dùng để nhắc người dùng nhập tay
-        d["nhapTay"] = [k for k in
-                        ("cap", "pe", "pb", "roe", "de", "car", "npl", "pcr", "froom", "chg12")
-                        if d.get(k) is None and not (la_bank and k == "de")
-                        and not (not la_bank and k in ("car", "npl", "pcr"))]
+        rieng_bank = ("car", "npl", "pcr", "nim", "nim1", "nim2")
+        rieng_thuong = ("de", "fcf", "cfoni")
+        d["nhapTay"] = [
+            k for k in ("cap", "pe", "pb", "roe", "de", "fcf", "cfoni",
+                        "car", "npl", "pcr", "nim", "froom", "chg12")
+            if d.get(k) is None
+            and not (la_bank and k in rieng_thuong)
+            and not (not la_bank and k in rieng_bank)
+        ]
         ket[ma] = d
 
     return ket, phien

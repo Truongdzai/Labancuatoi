@@ -25,7 +25,7 @@ concurrency:
 jobs:
   cap-nhat:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
 
     steps:
       - name: Lấy mã nguồn
@@ -46,8 +46,10 @@ jobs:
           ACCEPT_TC: "tôi đồng ý"     # vnstock hỏi điều khoản khi chạy không có người
           PYTHONUTF8: "1"
         # --nghi: vnstock chặn tốc độ ở tài khoản thường (khoảng 20 lượt/phút).
-        # 5 giây một mã đủ thoáng; 20 mã mất chừng hai phút.
-        run: python scraper.py --ra app/data.json --nghi 5
+        # Bộ lọc v3 gọi thêm 1–2 lượt mỗi mã (dòng tiền cho doanh nghiệp thường,
+        # NIM cho ngân hàng) nên phải giãn ra: 5 giây là chạm trần liên tục, 10
+        # giây thì trôi. 20 mã mất chừng bốn phút — vẫn thừa trong timeout.
+        run: python scraper.py --ra app/data.json --nghi 10
 
       - name: Kiểm tra tệp vừa sinh
         run: |

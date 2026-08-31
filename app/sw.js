@@ -4,7 +4,7 @@
 
    ĐỔI PHIÊN BẢN mỗi lần sửa app, nếu không điện thoại sẽ giữ mãi bản cũ.
 */
-const PHIEN_BAN = "la-ban-v1.3.0";
+const PHIEN_BAN = "la-ban-v1.4.0";
 const CACHE_SHELL = PHIEN_BAN + "-shell";
 const CACHE_FONT = PHIEN_BAN + "-font";
 

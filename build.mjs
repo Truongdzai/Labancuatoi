@@ -124,9 +124,57 @@ bao(!/\{[^}]*hasModelInCache[^}]*\}\s*=\s*await import/.test(app),
     // chip lọc = mỗi nhóm một cái, cộng chip "Tất cả"
     bao(nhom.size + 1 === 52, `52 chip lọc — đếm được ${nhom.size + 1}`);
   }
+  /* Cờ đỏ: đếm số thôi thì quá yếu — xoá một luật rồi thêm luật khác vào là đếm
+     vẫn khớp. Nên soi VÂN TAY từng luật trong 19 luật gốc. Chỉ cần một luật biến
+     mất là build hỏng, kể cả khi tổng số vẫn đúng. */
+  const GOC_19 = [
+    "Vốn hoá dưới 10.000 tỷ",
+    "P/E âm hoặc bằng 0",
+    "P/E trên 30",
+    "P/B dưới 0,8 với một ngân hàng",
+    "P/B dưới 0,7",
+    "ROE trên 40%",
+    "ROE dưới 5%",
+    "CAR dưới 9%",
+    "Tỷ lệ nợ xấu trên 3%",
+    "Tỷ lệ bao phủ nợ xấu dưới 50%",
+    "Bao phủ nợ xấu dưới 80%",
+    "Nợ xấu tăng <strong>hai quý liên tiếp</strong>",
+    "Nợ xấu tăng so với quý trước",
+    "Nợ vay gấp hơn 2 lần vốn chủ",
+    "Room ngoại đã gần kín",
+    "Giá đã tăng hơn 80% trong 12 tháng",
+    "Danh sách ứng viên nâng hạng",
+    "Mâu thuẫn trực tiếp",
+    "Lợi suất lợi nhuận (1/PE"
+  ];
+  const mat = GOC_19.filter(s => !app.includes(s));
+  bao(mat.length === 0, mat.length
+    ? `19 luật cờ đỏ gốc — MẤT ${mat.length}: ${mat.join(" | ")}`
+    : "19 luật cờ đỏ gốc còn nguyên vẹn");
+
   const co = (app.match(/flags\.push/g) || []).length;
-  bao(co === 19, `19 luật cờ đỏ trong bộ lọc — đếm được ${co}`);
+  bao(co >= 19, `tổng số luật cờ đỏ — ${co} (19 gốc + ${co - 19} mới của v3)`);
 }
+
+/* ---------- v3: chỉ số mới và xếp hạng chéo ---------- */
+// Ba chỉ số v3 phải có mặt cả ở ô nhập lẫn ở phần chấm điểm.
+bao(/\["fcf",/.test(app) && app.includes("Lợi suất dòng tiền tự do"),
+    "v3 · lợi suất dòng tiền tự do");
+bao(/\["cfoni",/.test(app) && app.includes("Dòng tiền / Lợi nhuận"),
+    "v3 · chất lượng lợi nhuận (dòng tiền trên lợi nhuận)");
+bao(/\["nim",/.test(app) && app.includes("co lại hai quý liên tiếp"),
+    "v3 · NIM và cờ đỏ NIM co hai quý");
+// Biên an toàn phải do JS tính, và mô hình bị cấm tính lại.
+bao(app.includes("PHAN_BU_RUI_RO") && app.includes("BIÊN AN TOÀN (đã tính sẵn"),
+    "v3 · biên an toàn do JS tính, đưa cho mô hình như dữ kiện");
+bao(app.includes("TUYỆT ĐỐI không tính lại"),
+    "v3 · prompt cấm mô hình tự tính biên an toàn");
+// Xếp hạng chéo BẮT BUỘC dùng chung bộ luật, không được có thang điểm riêng.
+bao(app.includes("function scoreScreen(nguon)") && app.includes("const r = scoreScreen(p);"),
+    "v3 · bảng xếp hạng dùng chung scoreScreen, không có thang riêng");
+bao(app.includes('id="xh-bang"') && app.includes("function renderXepHang"),
+    "v3 · có bảng xếp hạng chéo");
 
 // --- số liệu tự động ---
 bao(app.includes('fetch("./data.json"'), "app có đọc data.json");

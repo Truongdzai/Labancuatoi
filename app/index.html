@@ -779,6 +779,37 @@ dialog.hoi ul{font-size:13px}
     <div class="note">Bỏ trống ô nào thì tiêu chí đó không được chấm — mẫu số sẽ tự co lại. Công cụ không đoán thay bạn.</div>
   </div>
 
+  <!-- ===== Bảng xếp hạng chéo =====
+       Hiện lên khi data.json có số. Chấm cả 20 mã bằng ĐÚNG bộ luật scoreScreen()
+       rồi xếp theo tiêu chí người dùng chọn. Không tải lại trang, không gọi mạng. -->
+  <div class="card pad" id="xephang-box" style="margin-top:22px" hidden>
+    <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:4px">
+      <div style="flex:1;min-width:230px">
+        <div class="eyebrow">So chéo</div>
+        <h3 style="font-size:17px;margin:5px 0 3px">Xếp hạng <span id="xh-so"></span> mã lấy tự động</h3>
+        <p style="font-size:13px;color:var(--ink2);line-height:1.6">Cùng một bộ luật đang chấm mã bạn gõ ở trên, chạy trên toàn bộ danh sách. Bấm tên cột để đổi cách xếp.</p>
+      </div>
+    </div>
+    <div class="row" style="margin:12px 0 4px;align-items:center">
+      <select id="xh-sap" aria-label="Xếp theo"
+        style="padding:8px 11px;border-radius:9px;border:1px solid var(--line-2);background:var(--surface);color:var(--ink);font:inherit;font-size:13px">
+        <option value="ty">Tỷ lệ giá trị / động lượng</option>
+        <option value="v">Điểm giá trị</option>
+        <option value="m">Điểm động lượng</option>
+        <option value="mos">Biên an toàn</option>
+        <option value="co">Ít cảnh báo nhất</option>
+        <option value="cap">Vốn hoá</option>
+      </select>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+        <input type="checkbox" id="xh-locbank" style="width:17px;height:17px;accent-color:var(--accent)">
+        Chỉ ngân hàng
+      </label>
+      <span class="note" style="margin:0" id="xh-ghi"></span>
+    </div>
+    <div class="tblwrap"><table id="xh-bang"></table></div>
+    <div class="note">Điểm ở đây chấm trên <strong>đúng những ô lấy tự động được</strong>. CAR, nợ xấu, bao phủ và room ngoại không có trong nguồn miễn phí nên mọi mã đều thiếu chúng như nhau — bảng này để <em>so tương đối giữa các mã</em>, không phải để kết luận mã nào tốt.</div>
+  </div>
+
   <div class="tiles" style="margin-top:18px" id="sctiles"></div>
 
   <div id="scverdict" style="margin-top:18px"></div>
@@ -2302,7 +2333,9 @@ const DEF = {
   tuDo:{so:"", ghi:""},                 // con số nào đủ để bạn TỰ DO
   tiec:"",                              // nếu 80 tuổi nhìn lại
   scr:{ticker:"", sector:"normal", cap:null, pe:null, pb:null, roe:null, de:null,
+       fcf:null, cfoni:null,                  // v3: dòng tiền tự do và chất lượng lợi nhuận
        car:null, npl:null, pcr:null, npl1:null, npl2:null,
+       nim:null, nim1:null, nim2:null,        // v3: biên lãi thuần ngân hàng, ba quý
        froom:null, chg12:null, deposit:5.5, ftse:false},
   ui:{cpane:"moc", tpane:"log"}         // pane nào đang mở trong tab Con số / Theo dõi
 };
@@ -4006,18 +4039,23 @@ const SCR_V = [
 ];
 /* nhóm phụ thuộc ngành — thay nhau, không bao giờ hiện cùng lúc */
 const SCR_SEC = {
-  normal: [["de",  "Nợ vay / Vốn chủ", "chỉ tính nợ vay có lãi",      "lần"]],
-  bank:   [["car", "CAR",              "hệ số an toàn vốn",           "%"],
-           ["npl", "Tỷ lệ nợ xấu",     "NPL, nhóm 3–5",               "%"],
-           ["pcr", "Bao phủ nợ xấu",   "PCR, dự phòng / nợ xấu",      "%"]]
+  normal: [["de",   "Nợ vay / Vốn chủ",     "chỉ tính nợ vay có lãi",              "lần"],
+           ["fcf",  "Dòng tiền tự do",      "tiền từ kinh doanh trừ chi mua sắm TSCĐ, 12 tháng", "tỷ"],
+           ["cfoni","Dòng tiền / Lợi nhuận","tiền từ kinh doanh chia lợi nhuận sau thuế", "lần"]],
+  bank:   [["car",  "CAR",                  "hệ số an toàn vốn",                   "%"],
+           ["npl",  "Tỷ lệ nợ xấu",         "NPL, nhóm 3–5",                       "%"],
+           ["pcr",  "Bao phủ nợ xấu",       "PCR, dự phòng / nợ xấu",              "%"],
+           ["nim",  "NIM quý gần nhất",     "biên lãi thuần — biên lợi nhuận gốc của ngân hàng", "%"]]
 };
 const SCR_TREND = [
   ["npl1", "Nợ xấu quý trước",     "kỳ liền trước", "%"],
-  ["npl2", "Nợ xấu 2 quý trước",   "kỳ trước nữa",  "%"]
+  ["npl2", "Nợ xấu 2 quý trước",   "kỳ trước nữa",  "%"],
+  ["nim1", "NIM quý trước",        "kỳ liền trước", "%"],
+  ["nim2", "NIM 2 quý trước",      "kỳ trước nữa",  "%"]
 ];
 const SEC_NOTE = {
-  normal: "Chế độ doanh nghiệp thường. Đòn bẩy đo bằng <strong>nợ vay có lãi ÷ vốn chủ</strong> — không tính phải trả người bán, vì đó không phải đòn bẩy tài chính.",
-  bank:   "Chế độ ngân hàng. Ô <strong>Nợ vay / Vốn chủ</strong> bị gỡ bỏ vì với ngân hàng, tiền gửi khách hàng chính là nguồn vốn kinh doanh — mọi ngân hàng đều có tỷ lệ 5–10 lần và tiêu chí đó sẽ đánh trượt tất cả. Thay bằng <strong>CAR</strong>, và thêm <strong>nợ xấu</strong> cùng <strong>tỷ lệ bao phủ</strong> — hai chỉ số rủi ro thật sự của một ngân hàng. Thang P/B cũng đổi: vùng tối ưu của ngân hàng là <strong>1,0–1,4</strong>, không phải 0,7–1,5."
+  normal: "Chế độ doanh nghiệp thường. Đòn bẩy đo bằng <strong>nợ vay có lãi ÷ vốn chủ</strong> — không tính phải trả người bán, vì đó không phải đòn bẩy tài chính. Hai ô <strong>dòng tiền</strong> là phần quan trọng nhất ở đây: lợi nhuận là ý kiến của kế toán, còn tiền mặt thì không cãi được.",
+  bank:   "Chế độ ngân hàng. Ô <strong>Nợ vay / Vốn chủ</strong> bị gỡ bỏ vì với ngân hàng, tiền gửi khách hàng chính là nguồn vốn kinh doanh — mọi ngân hàng đều có tỷ lệ 5–10 lần và tiêu chí đó sẽ đánh trượt tất cả. Thay bằng <strong>CAR</strong>, và thêm <strong>nợ xấu</strong> cùng <strong>tỷ lệ bao phủ</strong> — hai chỉ số rủi ro thật sự của một ngân hàng. Thang P/B cũng đổi: vùng tối ưu của ngân hàng là <strong>1,0–1,4</strong>, không phải 0,7–1,5. Hai ô dòng tiền cũng bị gỡ: báo cáo lưu chuyển tiền tệ của ngân hàng không so sánh được với doanh nghiệp thường, cho vay ra bị ghi là dòng tiền âm. Thay bằng <strong>NIM</strong> — biên lãi thuần, thứ quyết định ngân hàng còn kiếm được tiền hay không."
 };
 const SCR_M = [
   ["froom","Room ngoại còn lại","phần khối ngoại chưa dùng",    "%"],
@@ -4043,8 +4081,12 @@ function buildScrFields(host, defs){
   });
 }
 
-function scoreScreen(){
-  const p = S.scr, V = [], M = [], flags = [];
+function scoreScreen(nguon){
+  /* Nhận tham số thay vì đọc thẳng S.scr. Bản cũ khoá cứng vào ô người dùng đang
+     gõ nên chỉ chấm được một mã; muốn xếp hạng 20 mã của data.json thì phải gọi
+     được cùng bộ luật này trên từng mã một. Bỏ trống thì vẫn là ô đang gõ, nên
+     mọi lời gọi cũ không đổi hành vi. */
+  const p = nguon || S.scr, V = [], M = [], flags = [];
   const BANK = p.sector === "bank";
   const add = (arr,name,shown,pt,max,note) => arr.push({name,shown,pt,max,note});
   const skip = (arr,name) => arr.push({name,shown:"—",pt:null,max:0,note:"Chưa nhập — không chấm"});
@@ -4130,6 +4172,31 @@ function scoreScreen(){
       if(p.pcr >= 50 && p.pcr < 80) flags.push(["warn","Bao phủ nợ xấu dưới 80% — mỏng hơn mặt bằng nhóm ngân hàng thận trọng. Khi nợ xấu tăng, ngân hàng sẽ phải trích lập thêm và khoản đó trừ thẳng vào lợi nhuận."]);
     } else skip(V,"Bao phủ nợ xấu");
 
+    /* --- V3-3: NIM, BIÊN LÃI THUẦN ---
+       CAR, nợ xấu và bao phủ đều nói về SỔ CHO VAY HÔM QUA. Không ô nào nói về
+       khả năng kiếm tiền NGÀY MAI. NIM chính là biên lợi nhuận gốc của một ngân
+       hàng: chênh lệch giữa lãi cho vay thu vào và lãi huy động trả ra. NIM co
+       lại là lợi nhuận tương lai co lại, và nó xuất hiện trước khi nợ xấu kịp
+       hiện lên báo cáo. Đây là chỉ báo sớm, ba ô ở trên đều là chỉ báo trễ. */
+    if(scHas(p.nim)){
+      let pt,n;
+      if(p.nim >= 3.5){ pt=2; n="Biên lãi dày"; }
+      else if(p.nim >= 2.5){ pt=1; n="Biên lãi trung bình"; }
+      else { pt=0; n="Biên lãi mỏng"; }
+      add(V,"NIM", p.nim.toFixed(2)+"%", pt,2,n);
+      if(p.nim < 2) flags.push(["warn","NIM dưới 2% — biên lãi rất mỏng. Ngân hàng phải cho vay ra khối lượng rất lớn mới đủ bù chi phí, và khi ấy áp lực tăng trưởng tín dụng thường kéo theo hạ chuẩn cho vay."]);
+    } else skip(V,"NIM");
+
+    /* --- CỜ ĐỎ XU HƯỚNG: NIM co lại hai quý liên tiếp --- */
+    if(scHas(p.nim) && scHas(p.nim1) && scHas(p.nim2)){
+      if(p.nim < p.nim1 && p.nim1 < p.nim2){
+        const gia = (p.nim2 - p.nim).toFixed(2);
+        flags.push(["crit","Biên lãi thuần <strong>co lại hai quý liên tiếp</strong>: "+p.nim2.toFixed(2)+"% → "+p.nim1.toFixed(2)+"% → "+p.nim.toFixed(2)+"% (mất "+gia+" điểm phần trăm). Đây là <strong>chỉ báo sớm</strong>: nó nói lợi nhuận các quý tới sẽ yếu đi, trong khi nợ xấu và bao phủ chỉ kể lại chuyện đã rồi. Nguyên nhân thường gặp là chi phí huy động tăng nhanh hơn lãi cho vay, hoặc ngân hàng phải hạ lãi suất cho vay để giữ khách. Một quý là nhiễu; hai quý liên tiếp là xu hướng."]);
+      } else if(p.nim > p.nim1 && p.nim1 > p.nim2){
+        flags.push(["warn","Biên lãi thuần nở ra hai quý liên tiếp. Tin tốt cho lợi nhuận, nhưng hãy kiểm tra nó đến từ đâu: nới biên bằng cách cho vay vào phân khúc rủi ro cao hơn thì lợi nhuận hôm nay chính là nợ xấu của hai năm sau."]);
+      }
+    }
+
     /* --- CỜ ĐỎ XU HƯỚNG: nợ xấu tăng 2 quý liên tiếp --- */
     if(scHas(p.npl) && scHas(p.npl1) && scHas(p.npl2)){
       if(p.npl > p.npl1 && p.npl1 > p.npl2){
@@ -4148,6 +4215,39 @@ function scoreScreen(){
       add(V,"Nợ vay / Vốn chủ", p.de.toFixed(2)+" lần", pt,2,n);
       if(p.de > 2) flags.push(["crit","Nợ vay gấp hơn 2 lần vốn chủ — rất nhạy với lãi suất. Bài học đầu tư số 6 trong cẩm nang: đừng để mình vào tình huống buộc phải bán; điều đó đúng với công ty y như đúng với bạn."]);
     } else skip(V,"Nợ vay / Vốn chủ");
+
+    /* --- V3-1: LỢI SUẤT DÒNG TIỀN TỰ DO ---
+       Lỗ hổng lớn nhất của bản cũ: cả luồng giá trị dựng trên lợi nhuận kế toán.
+       Lợi nhuận là ý kiến, tiền mặt là sự thật. Một công ty có thể ghi nhận lãi
+       đều đặn nhiều năm trong khi tiền thật chảy ra ngoài để mua sắm tài sản.
+       Ví dụ có thật, số liệu 2025: HPG có P/E 13, ROE 12% — đẹp theo mọi tiêu chí
+       cũ — nhưng dòng tiền tự do ÂM 8.382 tỷ. Bộ lọc cũ không hề thấy điều đó. */
+    if(scHas(p.fcf) && scHas(p.cap) && p.cap > 0){
+      const fy = p.fcf / p.cap * 100;
+      let pt,n;
+      if(fy >= 8){ pt=2; n="Sinh tiền mạnh so với vốn hoá"; }
+      else if(fy >= 4){ pt=1; n="Sinh tiền vừa phải"; }
+      else if(fy > 0){ pt=0; n="Sinh tiền yếu"; }
+      else { pt=0; n="Đốt tiền — dòng tiền tự do âm"; }
+      add(V,"Lợi suất dòng tiền tự do", fy.toFixed(1)+"%", pt,2,n);
+      if(p.fcf <= 0) flags.push(["crit","Dòng tiền tự do âm: sau khi trả chi phí vận hành và chi mua sắm tài sản, công ty <strong>không còn đồng nào</strong> — thậm chí phải bù thêm. Lợi nhuận trên báo cáo vẫn có thể dương, vì kế toán ghi nhận doanh thu trước khi tiền về và trải chi phí mua tài sản ra nhiều năm. Doanh nghiệp đốt tiền phải sống bằng vay nợ hoặc phát hành thêm cổ phiếu, và cả hai đều lấy đi phần của bạn. Hãy kiểm tra vì sao: đang đầu tư mở rộng có chủ đích, hay đơn giản là làm ăn không ra tiền."]);
+      else if(fy > 0 && fy < 2) flags.push(["warn","Lợi suất dòng tiền tự do dưới 2% — thấp hơn cả lạm phát. Bạn đang trả giá cho một cỗ máy sinh ra rất ít tiền mặt so với số tiền phải bỏ ra mua nó."]);
+    } else skip(V,"Lợi suất dòng tiền tự do");
+
+    /* --- V3-2: CHẤT LƯỢNG LỢI NHUẬN ---
+       Một câu hỏi duy nhất: lợi nhuận ghi trên báo cáo có biến thành tiền không?
+       Đây là chỉ báo gian lận sổ sách rẻ tiền và hiệu quả nhất. Doanh nghiệp thổi
+       doanh thu bằng bán chịu sẽ có lợi nhuận đẹp mà dòng tiền không theo kịp —
+       chênh lệch đó phải nằm đâu đó, thường là ở khoản phải thu phình to. */
+    if(scHas(p.cfoni)){
+      let pt,n;
+      if(p.cfoni >= 1){ pt=2; n="Lợi nhuận biến thành tiền đầy đủ"; }
+      else if(p.cfoni >= 0.7){ pt=1; n="Phần lớn lợi nhuận có tiền theo sau"; }
+      else { pt=0; n="Lợi nhuận không biến thành tiền"; }
+      add(V,"Dòng tiền / Lợi nhuận", p.cfoni.toFixed(2)+" lần", pt,2,n);
+      if(p.cfoni < 0) flags.push(["crit","Dòng tiền kinh doanh âm trong khi vẫn báo lãi. Đây là tổ hợp đáng ngại nhất trong cả bảng: công ty nói rằng mình kiếm được tiền, nhưng tiền không hề vào. Chênh lệch đó phải nằm ở đâu đó — thường là khoản phải thu hoặc hàng tồn kho phình ra. Hãy mở thuyết minh báo cáo tài chính ra đọc trước khi làm gì tiếp."]);
+      else if(p.cfoni < 0.7) flags.push(["warn","Dòng tiền kinh doanh chỉ bằng dưới 70% lợi nhuận sau thuế. Lợi nhuận đang chạy nhanh hơn tiền mặt. Một năm lệch có thể do thời điểm ghi nhận; lệch nhiều năm liền là dấu hiệu chất lượng lợi nhuận kém."]);
+    } else skip(V,"Dòng tiền / Lợi nhuận");
   }
 
   /* ---------- LUỒNG 2: ĐỘNG LƯỢNG VÀ SỰ KIỆN ---------- */
@@ -4169,8 +4269,13 @@ function scoreScreen(){
     if(p.chg12 > 80) flags.push(["warn","Giá đã tăng hơn 80% trong 12 tháng. Nếu bạn định DCA vào đây thì bạn đang bắt đầu chuỗi mua ở gần đỉnh của một đợt tăng — đúng kịch bản mà chương XLIV của cẩm nang lấy làm ví dụ xấu nhất."]);
   } else skip(M,"Đà giá 12 tháng");
 
-  add(M,"Ứng viên nâng hạng FTSE", p.ftse?"Có":"Không", p.ftse?2:0, 2,
-      p.ftse ? "Nằm trong nhóm được nhắc tới — thông tin này đã công khai" : "Không nằm trong nhóm được nhắc tới");
+  /* Trước đây ô này cho 2/6 điểm động lượng — một phần ba cả luồng — chỉ vì người
+     dùng tự tick vào một thông tin ai cũng đọc được trên báo. Cùng lúc đó chính bộ
+     lọc lại bắn cờ cảnh báo rằng thông tin ấy đã nằm trong giá. Tức là nó vừa
+     thưởng vừa phạt đúng một sự kiện. Hạ xuống 1 điểm: vẫn ghi nhận, nhưng không
+     để một ô tick tự khai chi phối cả luồng. */
+  add(M,"Ứng viên nâng hạng FTSE", p.ftse?"Có":"Không", p.ftse?1:0, 1,
+      p.ftse ? "Nằm trong nhóm được nhắc tới — thông tin đã công khai nên chỉ tính 1 điểm" : "Không nằm trong nhóm được nhắc tới");
   if(p.ftse) flags.push(["warn","Danh sách ứng viên nâng hạng đã được công bố rộng rãi trên báo chí tài chính. Thông tin ai cũng biết trước thường đã phản ánh vào giá — và hiệu ứng thêm vào chỉ số có xu hướng đảo chiều một phần sau khi các quỹ mua xong."]);
   if(p.ftse && scHas(p.froom) && p.froom < 5) flags.push(["crit","Mâu thuẫn trực tiếp: bạn đang dựa vào luận điểm dòng tiền ngoại, nhưng room ngoại gần kín. Hai điều này không thể cùng đúng."]);
 
@@ -4182,15 +4287,47 @@ function scoreScreen(){
       flags.push(["crit","Lợi suất lợi nhuận (1/PE = "+ey.toFixed(1)+"%) thấp hơn lãi tiết kiệm ("+p.deposit.toFixed(1)+"%). Bạn đang chấp nhận toàn bộ rủi ro cổ phiếu để lấy lợi suất thấp hơn gửi ngân hàng. Điều đó chỉ hợp lý nếu bạn tin lợi nhuận sẽ tăng mạnh — và đó là niềm tin bạn phải tự kiểm chứng."]);
   }
 
+  /* --- BIÊN AN TOÀN ---
+     Bản cũ chỉ xếp hạng rẻ/đắt theo từng nấc, không bao giờ trả lời câu hỏi gốc:
+     giá đang thấp hơn giá trị bao nhiêu phần trăm?
+
+     Mô hình dùng ở đây là VỐN HOÁ MỘT GIAI ĐOẠN, cố ý chọn loại thô sơ nhất:
+         giá trị hợp lý = dòng tiền hằng năm ÷ lợi suất yêu cầu
+         biên an toàn   = 1 − lợi suất yêu cầu ÷ lợi suất hiện tại
+     Giả định là dòng tiền đứng yên mãi mãi, KHÔNG tăng trưởng. Đó là giả định bi
+     quan có chủ ý: nếu một cổ phiếu chỉ hấp dẫn khi ta cho nó tăng trưởng, thì
+     phần hấp dẫn ấy do dự báo của ta tạo ra chứ không phải do giá.
+
+     Ưu tiên lợi suất DÒNG TIỀN TỰ DO. Chỉ lùi về lợi suất lợi nhuận khi không có
+     số dòng tiền, và với ngân hàng thì luôn dùng lợi suất lợi nhuận vì báo cáo
+     lưu chuyển tiền tệ của ngân hàng không so sánh được. */
+  let mos = null;
+  {
+    const fy = (!BANK && scHas(p.fcf) && scHas(p.cap) && p.cap > 0) ? p.fcf/p.cap*100 : null;
+    const dung = (fy !== null && fy > 0) ? fy : ey;
+    const nguonTen = (fy !== null && fy > 0) ? "dòng tiền tự do" : "lợi nhuận kế toán";
+    if(dung !== null && dung > 0){
+      const yeuCau = (scHas(p.deposit) ? p.deposit : 5.5) + PHAN_BU_RUI_RO;
+      mos = {loiSuat:dung, yeuCau, nguon:nguonTen, bien:(1 - yeuCau/dung)*100, fy};
+      if(mos.bien <= -30) flags.push(["crit","Biên an toàn âm sâu: ở mức giá này, "+nguonTen+" chỉ mang lại "+dung.toFixed(1)+"% mỗi năm, trong khi để bù rủi ro cổ phiếu bạn cần ít nhất "+yeuCau.toFixed(1)+"%. Bạn đang trả trước cho một mức tăng trưởng chưa xảy ra — và nếu nó không xảy ra thì không có đệm nào đỡ cho bạn."]);
+      else if(mos.bien < 0) flags.push(["warn","Biên an toàn âm nhẹ: giá đang nhỉnh hơn mức mà "+nguonTen+" hiện tại biện minh được. Chưa đến mức nguy hiểm, nhưng bạn không còn khoảng đệm cho sai sót."]);
+    }
+  }
+
   const sum = a => a.filter(x=>x.pt!==null).reduce((t,x)=>t+x.pt,0);
   const cap = a => a.filter(x=>x.pt!==null).reduce((t,x)=>t+x.max,0);
   const vg = sum(V), vm = cap(V), mg = sum(M), mm = cap(M);
   return {
-    V, M, flags, ey,
+    V, M, flags, ey, mos,
     v:{got:vg, max:vm, pct: vm? vg/vm*100 : null},
     m:{got:mg, max:mm, pct: mm? mg/mm*100 : null}
   };
 }
+
+/* Phần bù rủi ro cổ phiếu, cộng vào lãi tiết kiệm để ra lợi suất yêu cầu.
+   5 điểm phần trăm là quy ước thận trọng, không phải hằng số thị trường. Đổi số
+   này là đổi toàn bộ thang biên an toàn, nên để một chỗ duy nhất. */
+const PHAN_BU_RUI_RO = 5;
 
 const SCR_VERDICT = {
   hh: ["warn","Hai tín hiệu cùng cao — hãy nghi ngờ dữ liệu trước khi mừng",
@@ -4228,15 +4365,28 @@ function renderScreen(){
     box.appendChild(t);
   };
   mk("Tín hiệu giá trị", r.v, "var(--good)",
-     S.scr.sector === "bank" ? "Vốn hoá · P/E · P/B · ROE · CAR · nợ xấu · bao phủ"
-                             : "Vốn hoá · P/E · P/B · ROE · Nợ trên vốn chủ");
+     S.scr.sector === "bank" ? "Vốn hoá · P/E · P/B · ROE · CAR · nợ xấu · bao phủ · NIM"
+                             : "Vốn hoá · P/E · P/B · ROE · nợ/vốn chủ · dòng tiền tự do · chất lượng lợi nhuận");
   mk("Tín hiệu động lượng và sự kiện", r.m, "var(--brass)", "Room ngoại · đà giá · ứng viên FTSE");
-  const t3 = el("div","tile");
-  t3.innerHTML = `<span class="stripe" style="background:var(--ink3)"></span>
-    <div class="k">Lợi suất lợi nhuận</div>
-    <div class="v">${r.ey === null ? "—" : r.ey.toFixed(1) + "%"}</div>
-    <div class="s">1 / PE — so với lãi tiết kiệm ${scHas(p.deposit) ? p.deposit.toFixed(1)+"%" : "chưa nhập"}</div>`;
-  box.appendChild(t3);
+
+  /* Biên an toàn — con số bản cũ không bao giờ trả lời được: giá đang thấp hơn
+     giá trị bao nhiêu phần trăm. Đặt ngay cạnh hai ô điểm để không ai đọc điểm
+     mà quên mất mình đang trả giá nào. */
+  const tm = el("div","tile");
+  if(r.mos === null){
+    tm.innerHTML = `<span class="stripe" style="background:var(--ink3)"></span>
+      <div class="k">Biên an toàn</div><div class="v">—</div>
+      <div class="s">Cần vốn hoá và P/E, hoặc dòng tiền tự do, mới tính được.</div>`;
+  } else {
+    const b = r.mos.bien;
+    const mau = b >= 30 ? "var(--good)" : b >= 0 ? "var(--brass)" : "var(--crit)";
+    tm.innerHTML = `<span class="stripe" style="background:${mau}"></span>
+      <div class="k">Biên an toàn</div>
+      <div class="v" style="color:${mau}">${b > 0 ? "+" : ""}${b.toFixed(0)}%</div>
+      <div class="s">Lợi suất ${r.mos.loiSuat.toFixed(1)}% từ ${esc(r.mos.nguon)}, so với mức ${r.mos.yeuCau.toFixed(1)}% cần có để bù rủi ro. Giả định dòng tiền đứng yên, không tăng trưởng.</div>
+      <div class="meter"><i style="width:${Math.max(0,Math.min(100,b)).toFixed(0)}%;background:${mau}"></i></div>`;
+  }
+  box.appendChild(tm);
 
   /* phán đoán mâu thuẫn */
   const vd = $("#scverdict");
@@ -4470,6 +4620,147 @@ try{
 }catch(e){ /* trình duyệt cũ: MediaQueryList không có addEventListener */ }
 
 /* ============================================================
+   XẾP HẠNG CHÉO — chấm cả danh sách bằng đúng bộ luật của bộ lọc
+   ============================================================ */
+/* Điều kiện để tính năng này đúng: nó KHÔNG được có bộ luật riêng. Nếu bảng xếp
+   hạng chấm theo cách khác với ô người dùng đang gõ, hai chỗ sẽ nói vênh nhau và
+   không ai biết tin chỗ nào. Nên nó gọi thẳng scoreScreen(p) — đó là toàn bộ lý
+   do hàm ấy được sửa để nhận tham số. */
+
+let xhSap = "ty", xhChiBank = false;
+
+/* Dựng bộ số theo đúng hình dạng S.scr từ một mã trong data.json. Ô nào nguồn
+   không có thì để null — scoreScreen tự bỏ qua và co mẫu số lại. */
+function xhBoSo(ma, d){
+  return {
+    ticker: ma, sector: d.nganh === "bank" ? "bank" : "normal",
+    cap: d.cap, pe: d.pe, pb: d.pb, roe: d.roe, de: d.de,
+    fcf: d.fcf, cfoni: d.cfoni,
+    car: d.car, npl: d.npl, pcr: d.pcr, npl1: d.npl1, npl2: d.npl2,
+    nim: d.nim, nim1: d.nim1, nim2: d.nim2,
+    froom: d.froom, chg12: d.chg12,
+    // mốc đối chiếu lấy theo ô người dùng đang đặt, để cả bảng so cùng một chuẩn
+    deposit: scHas(S.scr.deposit) ? S.scr.deposit : 5.5,
+    ftse: false
+  };
+}
+
+/* Tỷ lệ giá trị trên động lượng — cách xếp mặc định.
+   Ý nghĩa: rẻ bao nhiêu so với mức đã chạy. Cao nghĩa là nền tảng tốt mà giá chưa
+   phản ánh; thấp nghĩa là giá đã chạy trước nền tảng. Cộng 1 vào mẫu để mã có
+   động lượng bằng 0 không đẩy tỷ lệ lên vô cực và chiếm mất đỉnh bảng. */
+function xhTyLe(v, m){
+  if(v.pct === null) return null;
+  return v.pct / ((m.pct === null ? 0 : m.pct) + 1);
+}
+
+function xhTinh(){
+  if(!AUTO || !AUTO.ma) return [];
+  return Object.keys(AUTO.ma).map(ma => {
+    const d = AUTO.ma[ma];
+    const p = xhBoSo(ma, d);
+    const r = scoreScreen(p);
+    return {
+      ma, ten: d.ten || "", nganh: p.sector, cap: d.cap,
+      v: r.v, m: r.m, mos: r.mos,
+      ty: xhTyLe(r.v, r.m),
+      co: r.flags.length,
+      crit: r.flags.filter(f => f[0] === "crit").length
+    };
+  });
+}
+
+function xhXep(ds){
+  const lay = {
+    ty:  x => x.ty,
+    v:   x => x.v.pct,
+    m:   x => x.m.pct,
+    mos: x => x.mos ? x.mos.bien : null,
+    cap: x => x.cap,
+    co:  x => x.co === null ? null : -x.co    // ít cảnh báo nhất lên đầu
+  }[xhSap];
+  /* Cần khoá phụ, không chỉ khoá chính.
+
+     Quan sát thật trên bộ 20 mã: cả thị trường giảm giá 12 tháng nên MỌI mã đều
+     được 0 điểm động lượng. Tỷ lệ giá trị/động lượng vì thế bằng nhau ở hàng loạt
+     mã (87,50), và nếu chỉ xếp theo một khoá thì thứ tự trong nhóm hoà là ngẫu
+     nhiên — người đọc sẽ tưởng mã đứng trên tốt hơn mã đứng dưới.
+
+     Nên hoà thì xét tiếp: biên an toàn dày hơn lên trước, rồi ít cảnh báo hơn,
+     cuối cùng là theo bảng chữ cái cho kết quả ổn định giữa các lần vẽ. */
+  const phu = [
+    x => x.mos ? x.mos.bien : null,
+    x => -x.crit,
+    x => -x.co
+  ];
+  const soSanh = (x, y) => {
+    if(x === null || x === undefined) return y === null || y === undefined ? 0 : 1;
+    if(y === null || y === undefined) return -1;
+    return y - x;
+  };
+  return ds.slice().sort((a, b) => {
+    const d = soSanh(lay(a), lay(b));
+    if(d !== 0) return d;
+    for(const f of phu){
+      const e = soSanh(f(a), f(b));
+      if(e !== 0) return e;
+    }
+    return a.ma.localeCompare(b.ma);
+  });
+}
+
+function renderXepHang(){
+  const box = $("#xephang-box");
+  if(!AUTO || !AUTO.ma || !Object.keys(AUTO.ma).length){ box.hidden = true; return; }
+
+  let ds = xhTinh();
+  if(xhChiBank) ds = ds.filter(x => x.nganh === "bank");
+  ds = xhXep(ds);
+
+  box.hidden = false;
+  $("#xh-so").textContent = ds.length;
+  $("#xh-ghi").textContent = "Phiên " + (AUTO.phien || "—");
+
+  const oPct = x => x === null ? "—" : Math.round(x) + "%";
+  const oDiem = o => o.max ? o.got + "/" + o.max : "—";
+  const oMos = x => {
+    if(!x.mos) return '<td class="n">—</td>';
+    const b = x.mos.bien;
+    const mau = b >= 30 ? "var(--good)" : b >= 0 ? "var(--brass)" : "var(--crit)";
+    return `<td class="n" style="color:${mau}">${b > 0 ? "+" : ""}${b.toFixed(0)}%</td>`;
+  };
+
+  const dau = [["ty","Giá trị / Động lượng"],["v","Giá trị"],["m","Động lượng"],
+               ["mos","Biên an toàn"],["co","Cảnh báo"]];
+  $("#xh-bang").innerHTML =
+    `<thead><tr><th>#</th><th>Mã</th><th>Ngành</th>` +
+    dau.map(([k,t]) => `<th style="cursor:pointer;${k === xhSap ? "color:var(--accent)" : ""}" data-sap="${k}">${t}${k === xhSap ? " ↓" : ""}</th>`).join("") +
+    `</tr></thead><tbody>` +
+    ds.map((x, i) => `<tr>
+      <td class="n" style="color:var(--ink3)">${i + 1}</td>
+      <td><strong>${esc(x.ma)}</strong></td>
+      <td style="color:var(--ink2);font-size:12.5px">${x.nganh === "bank" ? "Ngân hàng" : "Thường"}</td>
+      <td class="n">${x.ty === null ? "—" : x.ty.toFixed(2)}</td>
+      <td class="n">${oDiem(x.v)} <span style="color:var(--ink3)">${oPct(x.v.pct)}</span></td>
+      <td class="n">${oDiem(x.m)} <span style="color:var(--ink3)">${oPct(x.m.pct)}</span></td>
+      ${oMos(x)}
+      <td class="n" style="color:${x.crit ? "var(--crit)" : "var(--ink3)"}">${x.co}${x.crit ? " (" + x.crit + " nặng)" : ""}</td>
+    </tr>`).join("") + `</tbody>`;
+
+  // bấm tên cột để đổi cách xếp — cùng trạng thái với ô chọn phía trên
+  $("#xh-bang").querySelectorAll("th[data-sap]").forEach(th => {
+    th.addEventListener("click", () => {
+      xhSap = th.dataset.sap;
+      $("#xh-sap").value = xhSap;
+      renderXepHang();
+    });
+  });
+}
+
+$("#xh-sap").addEventListener("change", e => { xhSap = e.target.value; renderXepHang(); });
+$("#xh-locbank").addEventListener("change", e => { xhChiBank = e.target.checked; renderXepHang(); });
+
+/* ============================================================
    TRỢ LÝ AI NỘI BỘ — WebLLM chạy trên WebGPU, ngay trong máy người dùng
    ============================================================ */
 /* HAI BỘ NÃO, MỘT CỬA VÀO.
@@ -4653,6 +4944,22 @@ function aiMoTa(metrics){
   day("deposit","lãi tiết kiệm","%");
   d.push("SỐ LIỆU: " + (so.length ? so.join(" · ") : "chưa nhập gì"));
   if(ey !== null) d.push("LỢI SUẤT LỢI NHUẬN (1/PE): " + ey.toFixed(1) + "%");
+
+  /* Biên an toàn ĐƯA VÀO như một dữ kiện đã tính sẵn, không phải bài toán giao cho
+     mô hình. Đây là điểm cốt lõi trong thiết kế: mô hình 0,5B từng bịa ra dòng điểm
+     "4/13 (35%)". Bắt nó tự tính một con số mà người dùng có thể mang đi đặt lệnh
+     là chuyện không được phép. JS tính, mô hình chỉ được chất vấn xem con số ấy
+     thật hay ảo. Đó cũng đúng vai của Munger: ông không bấm máy tính, ông hỏi vặn
+     xem giả định nào đang chống đỡ con số. */
+  if(metrics.mos){
+    const m2 = metrics.mos;
+    d.push("BIÊN AN TOÀN (đã tính sẵn, đừng tính lại): " + m2.bien.toFixed(0) + "% — " +
+           "lợi suất " + m2.loiSuat.toFixed(1) + "% từ " + m2.nguon +
+           ", so với mức yêu cầu " + m2.yeuCau.toFixed(1) + "%. " +
+           "Mô hình vốn hoá một giai đoạn, giả định dòng tiền đứng yên không tăng trưởng.");
+  } else {
+    d.push("BIÊN AN TOÀN: chưa tính được, thiếu số");
+  }
   d.push("Ô CHƯA NHẬP: " + (thieu.length ? thieu.join(" · ") : "không có"));
 
   /* Chỉ lấy CÂU ĐẦU của mỗi cờ đỏ, và có trần số lượng.
@@ -4679,16 +4986,25 @@ function aiMoTa(metrics){
   return d.join(" | ").replace(/\s+/g, " ").trim();
 }
 
+/* Nhân cách: nhà đầu tư giá trị già đời, hoài nghi, ghét lối nói nước đôi.
+   Ba mệnh lệnh cốt lõi — đảo ngược vấn đề, đòi biên an toàn, và luôn hỏi "rồi
+   sau đó thì sao". Cố ý KHÔNG nêu tên người thật trong prompt: mô hình nhỏ hay
+   trượt sang bắt chước giai thoại và trích dẫn bịa khi được cho một cái tên. */
 const AI_LUAT = [
-  "Bạn viết tiếng Việt cho người đọc phổ thông, giọng bình tĩnh.",
-  "Nhiệm vụ duy nhất: nêu những RỦI RO ĐỊNH GIÁ ĐANG BỊ CHE KHUẤT phía sau các con số được cung cấp.",
-  "BẮT BUỘC: đúng ba câu văn xuôi liền mạch, trong một đoạn duy nhất.",
-  "CẤM viết bất kỳ chữ số nào, cấm viết tỷ lệ phần trăm, cấm viết phân số kiểu 4/14, cấm chấm điểm lại, cấm lặp lại số liệu đã cho.",
+  "Bạn là một nhà đầu tư giá trị lâu năm, hoài nghi, nói thẳng, ghét sự mơ hồ.",
+  "Cách nghĩ của bạn: luôn lật ngược vấn đề — thay vì hỏi vì sao nên mua, hãy hỏi mình sẽ mất tiền bằng cách nào.",
+  "Bạn không tin lợi nhuận kế toán khi nó không đi kèm tiền mặt, và bạn coi biên an toàn là thứ duy nhất che chở cho người mua.",
+  "NHIỆM VỤ: đọc bảng dữ liệu, rồi chỉ ra RỦI RO ĐỊNH GIÁ ĐANG BỊ CHE KHUẤT — thứ mà bảng điểm không nói ra được.",
+  "BẮT BUỘC: câu đầu phải nói về BIÊN AN TOÀN đã cho — nó thật sự là đệm đỡ, hay chỉ là ảo giác do giả định tạo ra.",
+  "BẮT BUỘC: câu thứ hai phải bám vào ÍT NHẤT MỘT cảnh báo cụ thể trong danh sách được cung cấp, và nói nó đe doạ điều gì.",
+  "BẮT BUỘC: câu thứ ba phải nêu điều mà dữ liệu KHÔNG cho bạn thấy, tức là chỗ mù còn lại.",
+  "BẮT BUỘC: đúng ba câu văn xuôi, một đoạn duy nhất.",
+  "Biên an toàn đã được tính sẵn và đưa cho bạn. TUYỆT ĐỐI không tính lại, không kiểm tra lại phép tính, không nêu con số.",
+  "CẤM viết bất kỳ chữ số nào. Hãy diễn đạt mọi mức độ bằng lời: mỏng, dày, âm, gần như không có.",
   "CẤM gạch đầu dòng, đánh số thứ tự, tiêu đề, dấu sao, in đậm, xuống dòng.",
-  "CẤM khuyên mua, bán hay nắm giữ. Cấm dự báo giá.",
-  "Hãy diễn giải Ý NGHĨA của tình trạng đó bằng lời, đừng nhắc lại dữ liệu.",
-  "Ví dụ đúng về hình dạng câu trả lời (nội dung chỉ để học cách viết):",
-  "Điểm yếu lớn nhất nằm ở chỗ bảng điểm không nhìn thấy chất lượng tài sản thật đằng sau con số lợi nhuận. Mức định giá rẻ ở đây nhiều khả năng phản ánh nghi ngờ của thị trường hơn là một cơ hội bị bỏ quên. Nếu luận điểm của bạn dựa vào một câu chuyện tăng trưởng, hãy tự hỏi ai đang đứng phía bên kia giao dịch và họ biết điều gì mà bạn chưa biết."
+  "CẤM khuyên mua, bán hay nắm giữ. Cấm dự báo giá. Cấm nêu tên người thật hay trích dẫn ai đó.",
+  "Ví dụ đúng về hình dạng và giọng văn (nội dung chỉ để học cách viết):",
+  "Biên an toàn ở đây mỏng tới mức gần như không tồn tại, và phần ít ỏi còn lại chỉ đứng vững nếu dòng tiền năm tới không xấu đi. Việc lợi nhuận không biến thành tiền mặt là thứ đáng ngại hơn cả mức định giá, vì nó đặt câu hỏi lên chính con số dùng để định giá. Điều bảng này không cho bạn thấy là chất lượng tài sản thật và động cơ của ban lãnh đạo, mà đó mới thường là chỗ tiền của cổ đông biến mất."
 ].join(" ");
 
 /* Dọn về ba câu văn xuôi. Mô hình nhỏ rất hay viết lố, thêm tiêu đề, hoặc bung
@@ -5012,16 +5328,21 @@ async function napDuLieuTuDong(){
       S.scr.deposit = d.laiTietKiem; save();
     }
     renderAutoBar();
+    renderXepHang();
   }catch(e){
     AUTO = null;
     st.textContent = "Chưa có tệp số liệu tự động (" + e.message + "). Bộ lọc vẫn dùng được bình thường — bạn nhập tay như trước.";
     renderAutoBar();
+    renderXepHang();
   }
 }
 
-const LK_AUTO_KEYS = ["cap","pe","pb","roe","de","car","npl","pcr","froom","chg12"];
+const LK_AUTO_KEYS = ["cap","pe","pb","roe","de","fcf","cfoni",
+                      "car","npl","pcr","nim","nim1","nim2","froom","chg12"];
 const AUTO_NHAN = {cap:"Vốn hoá", pe:"P/E", pb:"P/B", roe:"ROE", de:"Nợ vay / Vốn chủ",
+                   fcf:"Dòng tiền tự do", cfoni:"Dòng tiền / Lợi nhuận",
                    car:"CAR", npl:"Nợ xấu", pcr:"Bao phủ nợ xấu",
+                   nim:"NIM", nim1:"NIM quý trước", nim2:"NIM 2 quý trước",
                    froom:"Room ngoại", chg12:"Đà giá 12 tháng"};
 
 /* Thanh gợi ý nằm ngay dưới ô mã trong tab Bộ lọc. */
@@ -5053,7 +5374,7 @@ function dienTuDong(ma){
   let n = 0;
   LK_AUTO_KEYS.forEach(k => { if(scHas(d[k])){ S.scr[k] = d[k]; n++; } });
   save();
-  applySector();
+  applySector();                 // dựng lại nhóm theo ngành + nhóm xu hướng
   buildScrFields("#scf-v", SCR_V);
   buildScrFields("#scf-m", SCR_M);
   buildScrFields("#scf-r", SCR_R);
