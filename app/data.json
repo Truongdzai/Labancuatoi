@@ -1,5 +1,5 @@
 {
- "capNhat": "16/09/2026 20:54 (+07)",
+ "capNhat": "17/09/2026 20:57 (+07)",
  "khongLayDuoc": [
   "CAR",
   "Room ngoại còn lại",
@@ -8,14 +8,14 @@
  "laiTietKiem": null,
  "ma": {
   "ACB": {
-   "cap": 131180.0,
+   "cap": 132341.0,
    "car": null,
    "cfoni": null,
-   "chg12": -0.7,
+   "chg12": 1.2,
    "de": null,
    "fcf": null,
    "froom": null,
-   "gia": 22600.0,
+   "gia": 22800.0,
    "kyBaoCao": "2026-Q2",
    "kyNganHang": "2018-Q4",
    "nganh": "bank",
@@ -37,14 +37,14 @@
    "ten": "Ngân hàng Thương mại Cổ phần Á Châu"
   },
   "BID": {
-   "cap": 264630.0,
+   "cap": 267178.0,
    "car": null,
    "cfoni": null,
-   "chg12": -5.5,
+   "chg12": -2.2,
    "de": null,
    "fcf": null,
    "froom": null,
-   "gia": 36350.0,
+   "gia": 36700.0,
    "kyBaoCao": "2026-Q2",
    "kyNganHang": "2018-Q4",
    "nganh": "bank",
@@ -66,14 +66,14 @@
    "ten": "Ngân hàng Thương mại Cổ phần Đầu tư và Phát triển Việt Nam"
   },
   "CTG": {
-   "cap": 239610.0,
+   "cap": 243882.0,
    "car": null,
    "cfoni": null,
-   "chg12": -13.0,
+   "chg12": -9.6,
    "de": null,
    "fcf": null,
    "froom": null,
-   "gia": 30850.0,
+   "gia": 31400.0,
    "kyBaoCao": "2026-Q2",
    "kyNganHang": "2018-Q4",
    "nganh": "bank",
@@ -95,14 +95,14 @@
    "ten": "Ngân hàng Thương mại Cổ phần Công thương Việt Nam"
   },
   "FPT": {
-   "cap": 126517.0,
+   "cap": 127374.0,
    "car": null,
    "cfoni": 1.08,
-   "chg12": -27.0,
+   "chg12": -27.9,
    "de": null,
    "fcf": 5038.0,
    "froom": null,
-   "gia": 73800.0,
+   "gia": 74300.0,
    "kyBaoCao": "2026-Q2",
    "nganh": "normal",
    "nhapTay": [
@@ -121,14 +121,14 @@
    "ten": "Công ty Cổ phần FPT"
   },
   "GAS": {
-   "cap": 215718.0,
+   "cap": 213787.0,
    "car": null,
    "cfoni": 1.14,
-   "chg12": 42.6,
+   "chg12": 38.4,
    "de": null,
    "fcf": 10726.0,
    "froom": null,
-   "gia": 89400.0,
+   "gia": 88600.0,
    "kyBaoCao": "2026-Q2",
    "nganh": "normal",
    "nhapTay": [
@@ -147,14 +147,14 @@
    "ten": "Tổng Công ty Khí Việt Nam - Công ty Cổ phần"
   },
   "HDB": {
-   "cap": 135643.0,
+   "cap": 138146.0,
    "car": null,
    "cfoni": null,
-   "chg12": 12.3,
+   "chg12": 15.8,
    "de": null,
    "fcf": null,
    "froom": null,
-   "gia": 27100.0,
+   "gia": 27600.0,
    "kyBaoCao": "2026-Q2",
    "kyNganHang": "2018-Q4",
    "nganh": "bank",
@@ -176,14 +176,14 @@
    "ten": "Ngân hàng Thương mại Cổ phần Phát Triển Thành phố Hồ Chí Minh"
   },
   "HPG": {
-   "cap": 176880.0,
+   "cap": 178991.0,
    "car": null,
    "cfoni": 1.12,
-   "chg12": -21.7,
+   "chg12": -18.7,
    "de": null,
    "fcf": -8382.0,
    "froom": null,
-   "gia": 20950.0,
+   "gia": 21200.0,
    "kyBaoCao": "2026-Q2",
    "nganh": "normal",
    "nhapTay": [
@@ -202,14 +202,14 @@
    "ten": "Công ty Cổ phần Tập đoàn Hòa Phát"
   },
   "MBB": {
-   "cap": 163516.0,
+   "cap": 165530.0,
    "car": null,
    "cfoni": null,
-   "chg12": -7.9,
+   "chg12": -5.0,
    "de": null,
    "fcf": null,
    "froom": null,
-   "gia": 20300.0,
+   "gia": 20550.0,
    "kyBaoCao": "2026-Q2",
    "kyNganHang": "2018-Q4",
    "nganh": "bank",
@@ -231,14 +231,14 @@
    "ten": "Ngân hàng Thương mại Cổ phần Quân đội"
   },
   "MSN": {
-   "cap": 98429.0,
+   "cap": 98867.0,
    "car": null,
    "cfoni": 0.33,
-   "chg12": -22.4,
+   "chg12": -19.6,
    "de": null,
    "fcf": -509.0,
    "froom": null,
-   "gia": 67400.0,
+   "gia": 67700.0,
    "kyBaoCao": "2026-Q2",
    "nganh": "normal",
    "nhapTay": [
@@ -257,14 +257,14 @@
    "ten": "Công ty Cổ phần Tập đoàn Masan"
   },
   "MWG": {
-   "cap": 105608.0,
+   "cap": 107971.0,
    "car": null,
    "cfoni": 0.87,
-   "chg12": -9.6,
+   "chg12": -4.8,
    "de": null,
    "fcf": 5208.0,
    "froom": null,
-   "gia": 71500.0,
+   "gia": 73100.0,
    "kyBaoCao": "2026-Q2",
    "nganh": "normal",
    "nhapTay": [
@@ -286,7 +286,7 @@
    "cap": 18812.0,
    "car": null,
    "cfoni": 0.01,
-   "chg12": -36.2,
+   "chg12": -35.0,
    "de": null,
    "fcf": -97.0,
    "froom": null,
@@ -309,14 +309,14 @@
    "ten": "Công ty Cổ phần Vàng bạc Đá quý Phú Nhuận"
   },
   "SSI": {
-   "cap": 51438.0,
+   "cap": 52940.0,
    "car": null,
    "cfoni": -2.54,
-   "chg12": -30.4,
+   "chg12": -26.6,
    "de": null,
    "fcf": -10574.0,
    "froom": null,
-   "gia": 20550.0,
+   "gia": 21150.0,
    "kyBaoCao": "2026-Q2",
    "nganh": "normal",
    "nhapTay": [
@@ -335,14 +335,14 @@
    "ten": "Công ty Cổ phần Chứng khoán SSI"
   },
   "STB": {
-   "cap": 142899.0,
+   "cap": 143653.0,
    "car": null,
    "cfoni": null,
-   "chg12": 35.1,
+   "chg12": 35.6,
    "de": null,
    "fcf": null,
    "froom": null,
-   "gia": 75800.0,
+   "gia": 76200.0,
    "kyBaoCao": "2026-Q2",
    "kyNganHang": "2018-Q4",
    "nganh": "bank",
@@ -364,14 +364,14 @@
    "ten": "Ngân hàng Thương mại Cổ phần Sài Gòn Tài Lộc"
   },
   "TCB": {
-   "cap": 229949.0,
+   "cap": 231366.0,
    "car": null,
    "cfoni": null,
-   "chg12": -13.6,
+   "chg12": -11.6,
    "de": null,
    "fcf": null,
    "froom": null,
-   "gia": 32450.0,
+   "gia": 32650.0,
    "kyBaoCao": "2026-Q2",
    "kyNganHang": "2018-Q5",
    "nganh": "bank",
@@ -393,14 +393,14 @@
    "ten": "Ngân hàng Thương mại Cổ phần Kỹ thương Việt Nam"
   },
   "VCB": {
-   "cap": 495492.0,
+   "cap": 497998.0,
    "car": null,
    "cfoni": null,
-   "chg12": -8.2,
+   "chg12": -6.6,
    "de": null,
    "fcf": null,
    "froom": null,
-   "gia": 59300.0,
+   "gia": 59600.0,
    "kyBaoCao": "2026-Q2",
    "kyNganHang": "2018-Q4",
    "nganh": "bank",
@@ -422,14 +422,14 @@
    "ten": "Ngân hàng Thương mại Cổ phần Ngoại thương Việt Nam"
   },
   "VHM": {
-   "cap": 583253.0,
+   "cap": 585717.0,
    "car": null,
    "cfoni": 0.98,
-   "chg12": 43.6,
+   "chg12": 43.9,
    "de": null,
    "fcf": 25758.0,
    "froom": null,
-   "gia": 71000.0,
+   "gia": 71300.0,
    "kyBaoCao": "2026-Q2",
    "nganh": "normal",
    "nhapTay": [
@@ -448,14 +448,14 @@
    "ten": "Công ty Cổ phần Vinhomes"
   },
   "VIB": {
-   "cap": 46124.0,
+   "cap": 46294.0,
    "car": null,
    "cfoni": null,
-   "chg12": -25.7,
+   "chg12": -23.9,
    "de": null,
    "fcf": null,
    "froom": null,
-   "gia": 13550.0,
+   "gia": 13600.0,
    "kyBaoCao": "2026-Q2",
    "kyNganHang": "2018-Q4",
    "nganh": "bank",
@@ -480,7 +480,7 @@
    "cap": 1872239.0,
    "car": null,
    "cfoni": 6.1,
-   "chg12": 257.3,
+   "chg12": 237.1,
    "de": null,
    "fcf": -6912.0,
    "froom": null,
@@ -503,14 +503,14 @@
    "ten": "Tập đoàn Vingroup - Công ty CP"
   },
   "VNM": {
-   "cap": 124561.0,
+   "cap": 125815.0,
    "car": null,
    "cfoni": 0.92,
-   "chg12": -0.4,
+   "chg12": -0.0,
    "de": null,
    "fcf": 6906.0,
    "froom": null,
-   "gia": 59600.0,
+   "gia": 60200.0,
    "kyBaoCao": "2026-Q2",
    "nganh": "normal",
    "nhapTay": [
@@ -529,14 +529,14 @@
    "ten": "Công ty Cổ phần Sữa Việt Nam"
   },
   "VPB": {
-   "cap": 218976.0,
+   "cap": 223737.0,
    "car": null,
    "cfoni": null,
-   "chg12": -11.4,
+   "chg12": -7.4,
    "de": null,
    "fcf": null,
    "froom": null,
-   "gia": 27600.0,
+   "gia": 28200.0,
    "kyBaoCao": "2026-Q2",
    "kyNganHang": "2018-Q4",
    "nganh": "bank",
@@ -559,6 +559,6 @@
   }
  },
  "nguon": "vnstock · bảng giá VCI + chỉ số KBS · dữ liệu công khai",
- "phien": "2026-09-16",
+ "phien": "2026-09-17",
  "soMa": 20
 }
